@@ -5,13 +5,13 @@ It is an attempt to replace the in-kernel VT implementation with a userspace
 console. See kmscon(1) man-page for usage information.
 
 Website:
-  http://www.freedesktop.org/wiki/Software/kmscon
+  https://github.com/Aetf/kmscon
 
 == Requirements ==
 
   Kmscon requires the following software:
     - libtsm: terminal emulator state machine
-        http://www.freedesktop.org/wiki/Software/kmscon/libtsm/
+        https://github.com/Aetf/libtsm
     - libudev: providing input, video, etc. device hotplug support (>=v172)
         http://www.freedesktop.org/wiki/Software/systemd/
     - libxkbcommon: providing internationalized keyboard handling
@@ -41,8 +41,9 @@ Website:
 
 == Download ==
 
-Released tarballs can be found at:
-  http://www.freedesktop.org/software/kmscon/releases
+Source can be found at:
+
+  https://github.com/Aetf/kmscon
 
 == Install ==
 
@@ -107,7 +108,7 @@ Released tarballs can be found at:
 
 == FAQ ==
 
-  Please see: http://www.freedesktop.org/wiki/Software/kmscon
+  Please see: https://github.com/Aetf/libtsm
 
 == Contact ==
 
