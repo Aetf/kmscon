@@ -1,17 +1,17 @@
-= KMSCON =
+# KMSCON 
 
 Kmscon is a simple terminal emulator based on linux kernel mode setting (KMS).
 It is an attempt to replace the in-kernel VT implementation with a userspace
 console. See kmscon(1) man-page for usage information.
 
 Website:
-  http://www.freedesktop.org/wiki/Software/kmscon
+  https://github.com/Aetf/kmscon
 
-== Requirements ==
+## Requirements 
 
   Kmscon requires the following software:
     - libtsm: terminal emulator state machine
-        http://www.freedesktop.org/wiki/Software/kmscon/libtsm/
+        https://github.com/Aetf/libtsm
     - libudev: providing input, video, etc. device hotplug support (>=v172)
         http://www.freedesktop.org/wiki/Software/systemd/
     - libxkbcommon: providing internationalized keyboard handling
@@ -39,20 +39,29 @@ Website:
     For multi-seat support you need the following packages:
       - systemd: Actually only the systemd-logind daemon and library is required.
 
-== Download ==
+## Download 
 
-Released tarballs can be found at:
-  http://www.freedesktop.org/software/kmscon/releases
+Source can be found at:
 
-== Install ==
+  https://github.com/Aetf/kmscon
 
-  To compile the kmscon binary, run the standard autotools commands:
-    $ test -f ./configure || NOCONFIGURE=1 ./autogen.sh
-    $ ./configure
-    $ make
-    $ make install
-  To compile the test applications, run:
-    $ make check
+## Install 
+
+- Ubuntu Server 18.04
+
+```
+$ apt install -y libudev-dev libxkbcommon-dev libdrm-dev linux-headers-$(uname -r)
+$ cd ~ && git clone https://github.com/Aetf/libtsm && cd libstm
+$ test -f ./configure || NOCONFIGURE=1 ./autogen.sh
+$ ./configure
+$ make
+$ make install
+$ cd ~ && git clone https://github.com/Aetf/kmscon && cd kmscon
+$ test -f ./configure || NOCONFIGURE=1 ./autogen.sh
+$ ./configure
+$ make
+$ make install
+```
 
   If you want only a very basic kmscon program without any major dependencies,
   use:
@@ -89,27 +98,44 @@ Released tarballs can be found at:
        - dummy: Dummy fallback session
        - terminal: Terminal-emulator sessions
 
-== Running ==
+## Running
+
+  ** kmscon must be run as root **
+
+  ```
+  $ sudo LD_LIBRARY_PATH=/usr/local/lib
+  $ sudo export LD_LIBRARY_PATH
+  $ sudo kmscon
+  ```
 
   To get usage information, run:
-    $ ./kmscon --help
+  ```
+  $ ./kmscon --help
+  ```
+
   You can then run kmscon with:
-    $ ./kmscon [options]
+  ```
+  $ ./kmscon [options]
+  ```
 
   For debug output use "--debug". For verbose output use "--verbose".
   With "--xkb-layout=<lang>" you can switch the keyboard layout.
   See "man kmscon" / kmscon(1) for more information.
 
-== License ==
+## License
 
   This software is licensed under the terms of an MIT-like license. Please see
   ./COPYING for further information.
 
-== FAQ ==
+## FAQ
 
-  Please see: http://www.freedesktop.org/wiki/Software/kmscon
+  Please see: 
 
-== Contact ==
+https://github.com/Aetf/libtsm
+
+https://dvdhrm.wordpress.com/2012/08/11/kmscon-linux-kmsdrm-based-virtual-console/
+
+## Contact
 
   This software is maintained by:
     David Herrmann <dh.herrmann@gmail.com>
