@@ -1,0 +1,337 @@
+= KMSCON Release News =
+
+CHANGES WITH 9.0.0:
+	* Modernized build system from autotools to meson.
+
+	* Note that many features rely on newer version of libtsm,
+	  thus we now requires libtsm >= 4.0.0 from the maintained fork at
+	  https://github.com/Aetf/libtsm.
+
+	* New features!
+	    - Custom palette support (#39)
+	    - Compose (dead-key) support (#36)
+	    - 24bit fbdev support (#8)
+	    - Detect XKB layout from localed (#7)
+	    - Underline and italic font (#3)
+
+	* Bug fixes
+	    - Fixed thin pixel lines at some screen edges (dac3c31b9e78ab28545caf88cbd8105a8c62052e)
+	    - Fixed many undefined behaviors and other minor bugs
+	    - Modernized codebase by moving away from deprecated symbols
+
+	* Many small fixes to documentation.
+
+CHANGES WITH 8:
+	* Several build-tools changes. Please adjust your build-scripts
+	  accoringly:
+	    - xz instead of bz2 tarballs
+	    - tarballs moved to: www.freedesktop.org/software/kmscon/releases
+	    - linking with ld.gold now supported
+	    - libtsm was extracted into a separate library, available at:
+	        www.freedesktop.org/wiki/Software/kmscon/libtsm
+	    - Several dependencies are mandatory now. See README.
+	    - --prefix=/usr is no longer the default. You need to pass it
+	      yourself!
+
+	* Removed wlterm. A GTK+ variant of wlterm is now available at:
+	    www.freedesktop.org/wiki/Software/kmscon/wlterm
+
+	* Removed uvtd and uvt. They were unused.
+
+	* Removed cdev-sessions
+
+	* Removed freetype2 font-backend
+
+	* Removed cairo text renderer
+
+	* eloop and uterm are now linked statically
+
+	* Dynamic font resizing is now supported. Use ctrl+'+' and ctrl+'-' as
+	  default shortcuts to resize your font on-the-fly.
+
+	* Lots of bug-fixes!
+
+CHANGES WITH 7:
+	* TSM, font and text subsystems have been extended to support
+	  multi-width fonts (via wcwidth(3)). This allows using CJK characters
+	  if your font provides the requested glyphs.
+
+	* COLORTERM is now set to "kmscon" to allow applications to detect
+	  whether they run in kmscon.
+
+	* /bin/login is now called with -p by default to reset the environment.
+	  This prevents kmscon from passing weird environment variables to the
+	  clients but still allows to start KMSCON with a customized
+	  environment.
+	  The new --reset-env variable controls this behavior (default: on).
+
+	* Add kmsconvt@.service systemd template. This replaces the
+	  kmscon@.service template and can now fully replace autovt@.service
+	  which is provided by systemd-logind.
+
+	* The DRM3D backend now uses gbm-surfaces and now longer depends on the
+	  custom EGL extensions. Everything is now handled inside of mesa so we
+	  are safe if the extensions are changed in the future.
+
+	* Modularize kmscon. Most of the dependencies can now be loaded during
+	  runtime and are no longer mandatory. This allows package-managers to
+	  provide the kmscon binary as default package and all the backends in a
+	  separate package to avoid huge dependencies.
+	  Please note that this modularization still needs to be applied to
+	  uterm so you shouldn't split the package yet, but instead wait for the
+	  next release.
+
+	* Freetype2 backend is now deprecated. Use the built-in 8x16 backend,
+	  the unifont backend or the fully-featured pango backend.
+
+	* bblit renderer is now built-in. You cannot deselect it, anymore.
+
+	* libuterm reads boot_vga values now via udev. libpciaccess is no longer
+	  needed and was removed entirely.
+
+	* uterm video backends are now split into different modules. They still
+	  need to be selected during compile-time, though. The next kmscon
+	  release will finish this uterm split.
+	  The dumb-video backend was renamed to drm2d. The drm-video backend was
+	  renamed to drm3d.
+
+	* libeloop now supports ONESHOT idle sources
+
+	* Experimental cairo+pixman renderers. These should not be used in any
+	  production systems! They are only provided for performance-testing and
+	  to show how cairo/pixman modules can be included.
+
+	* unifont font backend is now enabled by default. The build was heavily
+	  improved to avoid long compilation times.
+
+	* Symbol-versioning was added to all libraries. Library interfaces are
+	  still not considered stable so don't package them separately! Feel
+	  free to link them statically.
+
+	* An experimental unfinished version of the UVT library has been added.
+	  Use it only for testing purposes. The next kmscon release will include
+	  documentation and more.
+	  UVT implements virtual terminals in user-space. It will soon replace
+	  the cdev-sessions in kmscon.
+
+	* Lots of bug-fixes!
+
+CHANGES WITH 6:
+	* Allow arbitrary paths with --vt (kmscon)
+
+	* xkbcommon is now mandatory. We need it to handle keyboard input
+	  properly and since xkbcommon-0.2.0 is released, there is no reason to
+	  not depend on it.
+	  We also removed the plain-input backend with this change.
+
+	* Snap window to console/font-size on resize (wlterm)
+
+	* Adjust to new libwayland-1.0 (wlterm)
+
+	* Many new command-line options for wlterm including --term, --login,
+	  --palette, --sb-size and many --grab-* options.
+
+	* fake-VTs no longer react on SIGUSR1/2. This was always broken and now
+	  removed.
+
+	* --switchvt works again and is now enabled by default.
+
+	* --xkb-model was introduced. The other --xkb-<rmlvo> options also use
+	  system-defaults instead of us-keymap as default value now.
+
+	* wlterm works properly in maximized and fullscreen mode now
+
+	* key-presses are now properly marked as "handled" so it is no longer
+	  possible for two subsystems to handle the same key-press.
+
+	* wlterm can now zoom the font size with ctrl+Plus/Minus
+
+	* TSM now supports screen selections. wlterm is hooked up with this and
+	  supports this, too. However, the VTE layer has not seen this yet so
+	  everything is computed in the terminal for now. Next kmscon release
+	  will include client-side mouse-protocol support.
+
+	* Copy/Paste now works with wlterm
+
+	* Key-repeat has been reworked and now allows adjusting repeat and delay
+	  times.
+
+	* Session support allows for multiple terminals (sessions) inside of
+	  each seat. You can switch between the sessions, kill them and create
+	  new terminals via keyboard shortcuts. Also several other sessions than
+	  terminal sessions were introduced. However, all of them are
+	  experimental and shouldn't be used.
+
+	* TSM now supports alternate screen buffers. They're enabled by default.
+
+	* Configuration handling has been reworked. Multiple config-files can
+	  now be parsed and each seat has its own configuration file in
+	  /etc/kmscon/<seat>.seat.conf.
+
+	* The build-tools have been reworked. They should now work properly with
+	  any option-combination imaginable.
+
+	* --login option can now be used in config-files.
+
+	* We print hints if keyboard-shortcut names are written with wrong
+	  capitalization.
+
+	* Improve systemd integration
+
+	* CDev sessions emulate enough of the VT API to make X-Server run as
+	  kmscon session. You can even run kmscon in default-mode as client in
+	  another kmscon manager.
+
+	* Bold fonts are now supported.
+
+	* kmscon.1 manpage is available now.
+
+	* ... and a lot of bugfixes
+
+CHANGES WITH 5:
+	* Idle sources are now faster registered and unregistered so they can
+	  be used for any scheduling tasks
+
+	* eloop got pre- and post-dispatch hooks to integrate external
+	  event-loops better
+
+	* Added pkg-config files for eloop, tsm and uterm
+
+	* Added xkbcommon-keysyms.h as fallback
+
+	* fakevt got removed. It is now integrated into kmscon core and is no
+	  longer needed.
+
+	* Cleaned up unicode, console and vte layer. It is now a fully
+	  independent library calles TSM.
+
+	* All helpers were prefixed with SHL_* and can be used in any project
+	  inside of this repository. They are linked statically and mostly
+	  inlined code.
+
+	* VTE layer now handles ALT key
+
+	* fbdev devices are automatically used if they are not run by DRM
+	  drivers. Use --fbdev to force the use of fbdev devices only.
+
+	* --vt=<num> now selects the TTY to use by kmscon on seat0
+
+	* Added wlterm, a native terminal emulator for Wayland
+
+	* Lots of bugfixes! Thanks to all the bug-reporters!
+
+CHANGES WITH 4:
+	* The "conf" subsystem was modularized so we can use it in other
+	  binaries as well. It is also much easier to add new parameters now.
+
+	* Remove internal dependencies. Several subsystems will be split into
+	  separate libraries (like eloop, uterm, vte+console) so we should avoid
+	  any internal dependencies between these. This shouldn't affect
+	  performance, though.
+
+	* New --seats argument which allows to specify what seats kmscon is
+	  running on.
+
+	* The old vt.[ch] subsystem is now merged into uterm_vt.c and a fake VT
+	  backend was added. This allows to activate/deactivate kmscon via
+	  keyboard shortcuts. This is for debugging only, though.
+
+	* The VTE layer was extended a lot to support more advanced control
+	  sequences and fix several bugs.
+
+	* --dumb now forces kmscon to use non-accelerated rendering
+
+	* The scrollback buffer now works. You can specify keyboard shortcuts
+	  via --grab-* options. Default is: <Shift>Up/Down/Prior/Next
+
+	* GL_EXT_unpack_subimage is not required anymore.
+
+	* _Lots_ of speed improvements in the rendering path.
+
+	* The unifont font backend was added. This is similar to 8x16 but has a
+	  lot more characters.
+
+	* ... and a lot of bugfixes
+
+CHANGES WITH 3: (development release)
+	* VTE support has been improved greatly. vt220 should be supported fully
+	  except for multi-line characters.
+
+	* glib dependency removed. Hashtables and unicode support is now
+	  implemented in kmscon.
+
+	* Configfiles are now supported. /etc/kmscon.conf and ~/.kmscon.conf are
+	  read by kmscon on startup. They can include the same options as the
+	  command line options of kmscon. However, command-line options have
+	  precedence.
+
+	* Multiple video objects are now supported per seat. That is, if you
+	  have more than one graphics card per seat, all of them will be used by
+	  kmscon. Multiple displays were supported from the beginning.
+
+	* Modularized input backend. The XKB backend is fully optional and can
+	  be activated/deactivated during runtime. The Dumb backend has been
+	  renamed to "plain".
+
+	* The eloop library is fully documented and should be API stable from
+	  now on.
+
+	* The font renderer subsystem has been rewritten and replaced with a new
+	  subsystem which can load different font-renderers during runtime.
+	  Several backends including static 8x16 backend has been added. It is
+	  possible to compile kmscon without freetype2/pango dependencies now.
+
+	* 2D blitting to framebuffers has been improved greatly. More devices
+	  are supported now and blending is available, too. The 3D devices have
+	  been updated to support these blitting operations via OpenGL. This may
+	  be slow on older devices, though.
+
+	* New text renderer subsystem has been added. It can load multiple
+	  different text-renderers during runtime. The default renderer (bblit)
+	  uses 2D blitting operations to render text. However, the gltex
+	  renderer is also available (optionally) which renders with OpenGL
+	  textures. This can improve performance greatly on modern devices.
+
+	* Gcc optimizations are now enabled by default to improve rendering
+	  performance.
+
+CHANGES WITH 2: (development release)
+	* Build scripts were improved and simplified. They also allow much more
+	  control about the build process now. The source was split into several
+	  different libraries.
+
+	* Added llog.h helper for logging in libraries.
+
+	* Eloop was moved into separate library and supports more more
+	  use-cases now. It can be used as a standalone project.
+
+	* Terminal emulator (vte.c) was improved a lot and can run vim now.
+
+	* Console layer was rewritten and is now much faster and much more
+	  standards compliant.
+
+	* Uterm monitor was added. The monitor uses udev and systemd-logind to
+	  watch the system for new seats and devices. This allows us to run on
+	  multiple seats simultaneously and being hotplug-capable.
+
+	* Uterm vt layer was added. This simply wraps the older VT layer so we
+	  can switch to different VT systems on-the-fly.
+
+	* New uterm video backends: The fbdev backend is now fully functional
+	  kmscon can run on any fbdev device now. Furthermore, the dumb backend
+	  was added which is simply an unaccelerated DRM backend that should
+	  work even without EGL, GL, gbm, etc.
+
+	* New 2D rendering API. In case OpenGL is not available, we now allow
+	  blitting images into the framebuffer. This is used for fbdev and dumb
+	  video devices.
+
+	* Font renderer now depends on pango. This is is needed only until I get
+	  the time to rewrite the freetype backend. But for now we depend on
+	  pango so have full font support.
+
+	* lots of small fixes
+
+CHANGES WITH 1: (development release)
+	* First kmscon release. For testing purposes only. Includes a rendering
+	  pipeline and a very rudimentary terminal emulator.

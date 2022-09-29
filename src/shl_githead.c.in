@@ -1,0 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: 2022 Aetf <aetf@unlimited-code.works>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+const char shl_git_head[] = "@VCS_TAG@";
