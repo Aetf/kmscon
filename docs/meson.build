@@ -4,6 +4,7 @@
 
 manpages = [
   'kmscon.1.xml.in',
+  'kmscon.conf.1.xml.in',
 ]
 
 data = configuration_data()
