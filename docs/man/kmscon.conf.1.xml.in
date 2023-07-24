@@ -1,0 +1,436 @@
+<?xml version='1.0'?> <!--*-nxml-*-->
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+
+<!--
+  Written 2023 by Mirco "MacSlow" Müller <macslow@gmail.com>
+  Dedicated to the Public Domain
+-->
+
+<refentry id="kmscon.conf">
+  <refentryinfo>
+    <title>kmscon.conf</title>
+    <productname>kmscon.conf</productname>
+    <date>January 2023</date>
+    <authorgroup>
+      <author>
+        <contrib>Developer</contrib>
+        <firstname>Mirco</firstname>
+        <surname>Müller</surname>
+        <email>macslow@gmail.com</email>
+      </author>
+    </authorgroup>
+  </refentryinfo>
+
+  <refmeta>
+    <refentrytitle>kmscon.conf</refentrytitle>
+    <manvolnum>1</manvolnum>
+  </refmeta>
+
+  <refnamediv>
+    <refname>kmscon.conf</refname>
+    <refpurpose>Configuration file for KMS/DRM based System Console</refpurpose>
+  </refnamediv>
+
+  <refsect1>
+    <title>Description</title>
+    <para>kmscon.conf is the configuration file to control the behavior of kmscon
+          and adjust it to your system-setup. It allows to remap the bindings of
+          keyboard-shortcuts, define the desired keyboard-layout, select font
+          attributes for text-rendering, hardware-accelerationn, orientation of
+          output and much more.</para>
+
+    <para>Below is a complete list of all recognized <emphasis>Options</emphasis>, their meaning and
+          possible values. In section <emphasis>Example</emphasis> is a typical real-world sample of
+          a configuration to guide you in creating your own.</para>
+  </refsect1>
+
+  <refsect1>
+    <title>Example</title>
+    <para>Here is a real-world example of a typical kmscon.conf file:</para>
+    <programlisting>
+### General Options ###
+verbose
+
+### Seat Options ###
+vt=1
+switchvt
+
+### Session Options ###
+session-max=6
+session-control
+
+### Terminal Options ###
+term=linux
+
+### Input Options ###
+xkb-model=pc102
+xkb-layout=de
+xkb-repeat-delay=200
+xkb-repeat-rate=65
+
+### Video Options ###
+drm
+hwaccel
+gpus=all
+render-engine=gltex
+rotate=normal
+
+### Font Options ###
+font-engine=pango
+font-size=18
+font-name=Ubuntu Mono
+    </programlisting>
+    <para>Any line starting with a #-character is ignored and considered to be a comment.</para>
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+    <para>Below is a complete list of all recognized options, their meaning and
+          possible values.</para>
+
+    <variablelist>
+      <para><emphasis>### General Options ###</emphasis></para>
+      <varlistentry>
+        <term><option>verbose</option></term>
+        <listitem>
+          <para>Make kmscon be very chatty about what it is doing. It prints to
+                stdout unless redirected. Off if not present in kmsconf.conf or
+                commented out. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>debug</option></term>
+        <listitem>
+          <para>Let kmscon be even more chatty. The text-output goes to stdout or
+                any file it was redirected to. Off if not present in kmsconf.conf
+                or commented out. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>silent</option></term>
+        <listitem>
+          <para>Suppress notices and warnings. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>configdir</option></term>
+        <listitem>
+          <para>Path to config directory. (default: /etc/kmscon)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>listen</option></term>
+        <listitem>
+          <para>Listen for new seats and spawn sessions accordingly. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <para><emphasis>### Seat Options ###</emphasis></para>
+      <varlistentry>
+        <term><option>vt</option></term>
+        <listitem>
+          <para>Select which VT to run on. (default: auto)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>switchvt</option></term>
+        <listitem>
+          <para>Automatically switch to VT. (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>seats</option></term>
+        <listitem>
+          <para>Select seats to run on. (default: current)</para>
+        </listitem>
+      </varlistentry>
+
+      <para><emphasis>### Session Options ###</emphasis></para>
+
+      <varlistentry>
+        <term><option>session-max</option></term>
+        <listitem>
+          <para>Maximum number of sessions. (default: 50)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>session-control</option></term>
+        <listitem>
+          <para>Allow keyboard session-control. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>terminal-session</option></term>
+        <listitem>
+          <para>Enable terminal session. (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <para><emphasis>### Terminal Options ###</emphasis></para>
+
+      <varlistentry>
+        <term><option>login</option></term>
+        <listitem>
+          <para>Start the given login process instead of the default process; all arguments following '--' will be be parsed as argv to this process. No more options after '--' will be parsed so use it at the end of the argument string. (default: /bin/login -p)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>term</option></term>
+        <listitem>
+          <para>Value of the TERM environment variable for the child process. (default: xterm-256color)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>reset-env</option></term>
+        <listitem>
+          <para>Reset environment before running child process. (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>palette</option></term>
+        <listitem>
+          <para>Select the used color palette. (default: default)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>sb-size</option></term>
+        <listitem>
+          <para>Size of the scrollback-buffer in lines. (default: 1000)</para>
+        </listitem>
+      </varlistentry>
+
+      <para><emphasis>### Input Options ###</emphasis></para>
+      <varlistentry>
+        <term><option>xkb-model</option></term>
+        <listitem>
+          <para>Set XkbModel for input devices. (default: unset)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>xkb-layout</option></term>
+        <listitem>
+          <para>Set XkbLayout for input devices. (default: unset)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>xkb-variant</option></term>
+        <listitem>
+          <para>Set XkbVariant for input devices. (default: unset)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>xkb-options</option></term>
+        <listitem>
+          <para>Set XkbOptions for input devices. (default: unset)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>xkb-keymap</option></term>
+        <listitem>
+          <para>Use a predefined keymap for input devices. (default: unset)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>xkb-repeat-delay</option></term>
+        <listitem>
+          <para>Initial delay for key-repeat in ms. (default: 250)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>xkb-repeat-rate</option></term>
+        <listitem>
+          <para>Delay between two key-repeats in ms. (default: 50)</para>
+        </listitem>
+      </varlistentry>
+
+      <para><emphasis>### Grabs/Keyboard-Shortcuts ###</emphasis></para>
+      <varlistentry>
+        <term><option>grab-scroll-up</option></term>
+        <listitem>
+          <para>Shortcut to scroll up. (default: &lt;Shift&gt;Up)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-scroll-down</option></term>
+        <listitem>
+          <para>Shortcut to scroll down. (default: &lt;Shift&gt;Down)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-page-up</option></term>
+        <listitem>
+          <para>Shortcut to scroll page up. (default: &lt;Shift&gt;Prior)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-page-down</option></term>
+        <listitem>
+          <para>Shortcut to scroll page down. (default: &lt;Shift&gt;Next)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-zoom-in</option></term>
+        <listitem>
+          <para>Shortcut to increase font size. (default: &lt;Ctrl&gt;Plus)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-zoom-out</option></term>
+        <listitem>
+          <para>Shortcut to decrease font size. (default: &lt;Ctrl&gt;Minus)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-session-next</option></term>
+        <listitem>
+          <para>Switch to next session. (default: &lt;Ctrl&gt;&lt;Logo&gt;Right)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-session-prev</option></term>
+        <listitem>
+          <para>Switch to previous session. (default: &lt;Ctrl&gt;&lt;Logo&gt;Left)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-session-dummy</option></term>
+        <listitem>
+          <para>Switch to dummy session. (default: &lt;Ctrl&gt;&lt;Logo&gt;Escape)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-session-close</option></term>
+        <listitem>
+          <para>Close current session. (default: &lt;Ctrl&gt;&lt;Logo&gt;BackSpace)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-terminal-new</option></term>
+        <listitem>
+          <para>Create new terminal session. (default: &lt;Ctrl&gt;&lt;Logo&gt;Return)</para>
+        </listitem>
+      </varlistentry>
+
+      <para><emphasis>### Video Options ###</emphasis></para>
+      <varlistentry>
+        <term><option>drm</option></term>
+        <listitem>
+          <para>Use DRM if available. (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>hwaccel</option></term>
+        <listitem>
+          <para>Use 3D hardware-acceleration if available. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>gpus</option></term>
+        <listitem>
+          <para>GPU selection mode. (default: all)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>render-engine</option></term>
+        <listitem>
+          <para>Console renderer. (default: not set)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>render-timing</option></term>
+        <listitem>
+          <para>Print renderer timing information. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>use-original-mode</option></term>
+        <listitem>
+          <para>Use the original KMS video mode. (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>mode</option></term>
+        <listitem>
+          <para>Set the resolution to {width}x{height}</para>
+        </listitem>
+      </varlistentry>
+
+      <para><emphasis>### Font Options ###</emphasis></para>
+      <varlistentry>
+        <term><option>font-engine</option></term>
+        <listitem>
+          <para>Font engine to use. (default: pango)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>font-size</option></term>
+        <listitem>
+          <para>Font size in points. (default: 12)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>font-name</option></term>
+        <listitem>
+          <para>Font name to use. (default: monospace)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>font-dpi</option></term>
+        <listitem>
+          <para>Force DPI value for all fonts. (default: 96)</para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>Files</title>
+    <para><emphasis>/etc/kmsconf.conf</emphasis></para>
+  </refsect1>
+
+  <refsect1>
+    <title>See Also</title>
+    <para>
+      <citerefentry><refentrytitle>kmscon</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+    </para>
+  </refsect1>
+</refentry>
