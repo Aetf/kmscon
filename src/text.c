@@ -103,7 +103,7 @@ void kmscon_text_unregister(const char *name)
 	shl_register_remove(&text_reg, name);
 }
 
-static int new_text(struct kmscon_text *text, const char *backend)
+static int new_text(struct kmscon_text *text, const char *backend, unsigned int orientation)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";
@@ -124,6 +124,7 @@ static int new_text(struct kmscon_text *text, const char *backend)
 
 	text->record = record;
 	text->ops = record->data;
+	text->orientation = orientation;
 
 	if (text->ops->init)
 		ret = text->ops->init(text);
@@ -143,10 +144,11 @@ static int new_text(struct kmscon_text *text, const char *backend)
  * kmscon_text_new:
  * @out: A pointer to the new text-renderer is stored here
  * @backend: Backend to use or NULL for default backend
+ * @rotate: Orientation ("normal", "inverted", "right" or "left") to use for output
  *
  * Returns: 0 on success, error code on failure
  */
-int kmscon_text_new(struct kmscon_text **out, const char *backend)
+int kmscon_text_new(struct kmscon_text **out, const char *backend, const char *rotate)
 {
 	struct kmscon_text *text;
 	int ret;
@@ -160,10 +162,31 @@ int kmscon_text_new(struct kmscon_text **out, const char *backend)
 		return -ENOMEM;
 	}
 
-	ret = new_text(text, backend);
+	text->orientation = ORIENTATION_UNDEFINED;
+
+	if (rotate) {
+		if (strncmp(rotate, "normal", 6) == 0) {
+			text->orientation = ORIENTATION_NORMAL;
+			log_debug("using: orientation: normal");
+		}
+		else if (strncmp(rotate, "right", 5) == 0) {
+			text->orientation = ORIENTATION_RIGHT;
+			log_debug("using: orientation: right");
+		}
+		else if (strncmp(rotate, "inverted", 8) == 0) {
+			text->orientation = ORIENTATION_INVERTED;
+			log_debug("using: orientation: inverted");
+		}
+		else if (strncmp(rotate, "left", 4) == 0) {
+			text->orientation = ORIENTATION_LEFT;
+			log_debug("using: orientation: left");
+		}
+	}
+
+	ret = new_text(text, backend, text->orientation);
 	if (ret) {
 		if (backend)
-			ret = new_text(text, NULL);
+			ret = new_text(text, NULL, text->orientation);
 		if (ret)
 			goto err_free;
 	}
@@ -334,6 +357,55 @@ unsigned int kmscon_text_get_rows(struct kmscon_text *txt)
 }
 
 /**
+ * kmscon_text_get_orientation:
+ * @txt: valid text renderer
+ * 
+ * With a valid @txt passed it, this returns the currently active orientation
+ * of the output/screen. Possible values are:
+ * 
+ *   - ORIENTATION_NORMAL
+ *   - ORIENTATION_RIGHT
+ *   - ORIENTATION_INVERTED
+ *   - ORIENTATION_LEFT
+ * 
+ * Returns: Current orientation enum or ORIENTATION_UNDEFINED if @txt is invalid
+ */
+unsigned int kmscon_text_get_orientation(struct kmscon_text *txt)
+{
+	if (!txt)
+		return ORIENTATION_UNDEFINED;
+
+	return txt->orientation;
+}
+
+/**
+ * kmscon_text_rotate:
+ * @txt: valid text renderer
+ * @orientation: enum value representing the desired output-orientation
+ * 
+ * Update the rotation/orientation of the text. It can be one of:
+ * 
+ *   - ORIENTATION_NORMAL
+ *   - ORIENTATION_RIGHT
+ *   - ORIENTATION_INVERTED
+ *   - ORIENTATION_LEFT
+ * 
+ * Returns: 0 on success, negative error code on failure.
+ */
+int kmscon_text_rotate(struct kmscon_text *txt, unsigned int orientation)
+{
+	int ret = 0;
+
+	if (orientation == ORIENTATION_UNDEFINED)
+		return -EINVAL;
+
+	if (txt->ops->rotate)
+		ret = txt->ops->rotate(txt, orientation);
+
+	return ret;
+}
+
+/**
  * kmscon_text_prepare:
  * @txt: valid text renderer
  *
@@ -415,6 +487,31 @@ int kmscon_text_render(struct kmscon_text *txt)
 	txt->rendering = false;
 
 	return ret;
+}
+
+/**
+ * kmscon_text_render_pointer:
+ * @txt: valid text renderer
+ * @cursor_x: column cell coordinate
+ * @cursor_y: row cell coordinate
+ *
+ * This draws a mouse-pointer cross-hair at the current mouse-position..
+ *
+ * Returns: 0 on success, negative error on failure.
+ */
+int kmscon_text_render_pointer(struct kmscon_text *txt,
+                              int cursor_x,
+                              int cursor_y)
+{
+   int ret = 0;
+
+   if (!txt)
+       return -EINVAL;
+
+   if (txt->ops->render_pointer)
+       ret = txt->ops->render_pointer(txt, cursor_x, cursor_y);
+
+   return ret;
 }
 
 /**

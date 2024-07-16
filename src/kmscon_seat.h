@@ -34,6 +34,8 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include "kmscon_mouse.h"
 #include "conf.h"
 #include "eloop.h"
 #include "uterm_input.h"
@@ -97,6 +99,9 @@ const char *kmscon_seat_get_name(struct kmscon_seat *seat);
 struct uterm_input *kmscon_seat_get_input(struct kmscon_seat *seat);
 struct ev_eloop *kmscon_seat_get_eloop(struct kmscon_seat *seat);
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat);
+
+struct kmscon_mouse_info *kmscon_seat_get_mouse(struct kmscon_seat *seat);
+struct shl_dlist kmscon_seat_get_displays(struct kmscon_seat *seat);
 
 void kmscon_seat_schedule(struct kmscon_seat *seat, unsigned int id);
 

@@ -51,6 +51,7 @@ libtsm_deps = dependency('libtsm', version: '>=4.0.2')
 libudev_deps = dependency('libudev', version: '>=172')
 dl_deps = dependency('dl')
 threads_deps = dependency('threads')
+dbus_deps = dependency('dbus-1', version: '>=1.14.4')
 
 python = find_program('python3')
 

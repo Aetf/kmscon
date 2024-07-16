@@ -2,6 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
+cc = meson.get_compiler('c')
+mlib = cc.find_library('m')
+
 #
 # Git-HEAD helper
 #
@@ -205,6 +208,8 @@ if enable_renderer_gltex
       'kmscon_mod_gltex.c',
       embed_gen.process('text_gltex_atlas.vert', extra_args: shader_regex),
       embed_gen.process('text_gltex_atlas.frag', extra_args: shader_regex),
+      embed_gen.process('mouse_pointer.vert', extra_args: shader_regex),
+      embed_gen.process('mouse_pointer.frag', extra_args: shader_regex),
     ],
     name_prefix: '',
     dependencies: [libtsm_deps, glesv2_deps, shl_deps],
@@ -249,6 +254,7 @@ kmscon_srcs = [
   'kmscon_seat.c',
   'kmscon_conf.c',
   'kmscon_main.c',
+  'kmscon_mouse.c',
 ]
 if enable_session_dummy
   kmscon_srcs += 'kmscon_dummy.c'
@@ -257,7 +263,7 @@ if enable_session_terminal
   kmscon_srcs += 'kmscon_terminal.c'
 endif
 kmscon = executable('kmscon', kmscon_srcs,
-  dependencies: [xkbcommon_deps, libtsm_deps, threads_deps, dl_deps, conf_deps, shl_deps, eloop_deps, uterm_deps],
+  dependencies: [mlib, xkbcommon_deps, libtsm_deps, threads_deps, dl_deps, conf_deps, shl_deps, eloop_deps, uterm_deps],
   export_dynamic: true,
   install: true,
   install_dir: libexecdir,

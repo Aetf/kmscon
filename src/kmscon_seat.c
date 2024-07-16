@@ -30,12 +30,14 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include "conf.h"
 #include "eloop.h"
 #include "kmscon_conf.h"
 #include "kmscon_dummy.h"
+#include "kmscon_mouse.h"
 #include "kmscon_seat.h"
 #include "kmscon_terminal.h"
 #include "shl_dlist.h"
@@ -95,6 +97,8 @@ struct kmscon_seat {
 	struct kmscon_session *dummy_sess;
 
 	unsigned int async_schedule;
+
+	struct kmscon_mouse_info* mouse;
 
 	kmscon_seat_cb_t cb;
 	void *data;
@@ -680,7 +684,7 @@ int kmscon_seat_new(struct kmscon_seat **out,
 		    void *data)
 {
 	struct kmscon_seat *seat;
-	int ret;
+	int ret = 0;
 	const char *locale;
 	char *keymap, *compose_file;
 	size_t compose_file_len;
@@ -698,6 +702,12 @@ int kmscon_seat_new(struct kmscon_seat **out,
 	seat->data = data;
 	shl_dlist_init(&seat->displays);
 	shl_dlist_init(&seat->sessions);
+
+	seat->mouse = kmscon_mouse_init(seat->eloop, seat);
+	if (!seat->mouse) {
+		log_error("failed to initalize mouse");
+		goto err_free;
+	}
 
 	seat->name = strdup(seatname);
 	if (!seat->name) {
@@ -783,6 +793,7 @@ err_conf:
 err_name:
 	free(seat->name);
 err_free:
+	kmscon_mouse_cleanup(seat->mouse);
 	free(seat);
 	return ret;
 }
@@ -824,6 +835,8 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 	uterm_input_unregister_cb(seat->input, seat_input_event, seat);
 	uterm_input_unref(seat->input);
 	kmscon_conf_free(seat->conf_ctx);
+	free(seat->mouse->selection);
+	free(seat->mouse);
 	free(seat->name);
 	uterm_vt_master_unref(seat->vtm);
 	ev_eloop_unref(seat->eloop);
@@ -958,6 +971,14 @@ struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat)
 		return NULL;
 
 	return seat->conf_ctx;
+}
+
+struct kmscon_mouse_info *kmscon_seat_get_mouse(struct kmscon_seat *seat)
+{
+   if (!seat)
+       return NULL;
+
+   return seat->mouse;
 }
 
 void kmscon_seat_schedule(struct kmscon_seat *seat, unsigned int id)

@@ -26,21 +26,14 @@
 
 /*
  * Vertex Shader
- * This shader is a very basic vertex shader which forwards all data and
- * performs basic matrix multiplications.
+ * A basic vertex shader for drawing a simple mouse-pointer.
  */
 
 uniform mat4 projection;
 uniform float orientation;
+uniform vec2 offset;
 
 attribute vec2 position;
-attribute vec2 texture_position;
-attribute vec3 fgcolor;
-attribute vec3 bgcolor;
-
-varying vec2 texpos;
-varying vec3 fgcol;
-varying vec3 bgcol;
 
 vec2 opRotate(in vec2 p, in float degrees)
 {
@@ -52,9 +45,6 @@ vec2 opRotate(in vec2 p, in float degrees)
 
 void main()
 {
-	vec2 rotatedPosition = opRotate(position, orientation);
-	gl_Position = projection * vec4(rotatedPosition, 0.0, 1.0);
-	texpos = texture_position;
-	fgcol = fgcolor;
-	bgcol = bgcolor;
+   vec2 rotatedPosition = opRotate(position + offset, orientation);
+   gl_Position = projection * vec4(rotatedPosition, 0.0, 1.0);
 }

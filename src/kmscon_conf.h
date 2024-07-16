@@ -135,6 +135,10 @@ struct kmscon_conf_t {
 	struct conf_grab *grab_session_close;
 	/* terminal-new grab */
 	struct conf_grab *grab_terminal_new;
+	/* rotate output clock-wise grab */
+	struct conf_grab *grab_rotate_cw;
+	/* rotate output counter-clock-wise grab */
+	struct conf_grab *grab_rotate_ccw;
 
 	/* Video Options */
 	/* use DRM if available */
@@ -145,6 +149,8 @@ struct kmscon_conf_t {
 	unsigned int gpus;
 	/* render engine */
 	char *render_engine;
+	/* orientation/rotation of output */
+	char *rotate;
 
 	/* Font Options */
 	/* font engine */

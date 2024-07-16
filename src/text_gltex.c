@@ -42,6 +42,7 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <limits.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,6 +55,8 @@
 #include "uterm_video.h"
 #include "text_gltex_atlas.frag.bin.h"
 #include "text_gltex_atlas.vert.bin.h"
+#include "mouse_pointer.frag.bin.h"
+#include "mouse_pointer.vert.bin.h"
 
 #define LOG_SUBSYSTEM "text_gltex"
 
@@ -93,6 +96,19 @@ struct glyph {
 #define GLYPH_STRIDE(gly) ((gly)->glyph->buf.stride)
 #define GLYPH_DATA(gly) ((gly)->glyph->buf.data)
 
+GLfloat mouse_block_vertices[] = {-.01f,  .02f,  // 0) top-left
+								   .01f,  .02f,  // 1) top-right
+								  -.01f, -.02f,  // 2) bottom-left
+								   .01f, -.02f}; // 3) bottom-right
+
+GLuint mouse_block_outline_indices[] = {0, 1,
+										1, 3,
+										0, 2,
+										2, 3};
+
+GLuint mouse_block_fill_indices[] = {0, 1, 3,
+									 0, 3, 2};
+
 struct gltex {
 	struct shl_hashtable *glyphs;
 	struct shl_hashtable *bold_glyphs;
@@ -105,6 +121,7 @@ struct gltex {
 	GLfloat advance_y;
 
 	struct gl_shader *shader;
+	GLuint uni_orientation;
 	GLuint uni_proj;
 	GLuint uni_atlas;
 	GLuint uni_advance_htex;
@@ -112,6 +129,14 @@ struct gltex {
 
 	unsigned int sw;
 	unsigned int sh;
+
+	GLfloat angle;
+
+	struct gl_shader *mouse_pointer_shader;
+	GLuint uni_orientation_mouse;
+	GLuint uni_proj_mouse;
+	GLuint uni_color_mouse;
+	GLuint uni_offset_mouse;
 };
 
 #define FONT_WIDTH(txt) ((txt)->font->attr.width)
@@ -186,6 +211,7 @@ static int gltex_set(struct kmscon_text *txt)
 	if (ret)
 		goto err_bold_htable;
 
+	gt->uni_orientation = gl_shader_get_uniform(gt->shader, "orientation");
 	gt->uni_proj = gl_shader_get_uniform(gt->shader, "projection");
 	gt->uni_atlas = gl_shader_get_uniform(gt->shader, "atlas");
 	gt->uni_advance_htex = gl_shader_get_uniform(gt->shader,
@@ -198,12 +224,45 @@ static int gltex_set(struct kmscon_text *txt)
 		goto err_shader;
 	}
 
+	vert = _binary_mouse_pointer_vert_start;
+	vlen = _binary_mouse_pointer_vert_size;
+	frag = _binary_mouse_pointer_frag_start;
+	flen = _binary_mouse_pointer_frag_size;
+	gl_clear_error();
+	static char *mouse_pointer_attr[] = { "position" };
+	ret = gl_shader_new(&gt->mouse_pointer_shader,
+						vert, vlen,
+						frag, flen,
+						mouse_pointer_attr, 1,
+						log_llog, NULL);
+	if (ret)
+		goto err_shader;
+
+	gt->uni_orientation_mouse = gl_shader_get_uniform(gt->mouse_pointer_shader,
+													  "orientation");
+	gt->uni_proj_mouse = gl_shader_get_uniform(gt->mouse_pointer_shader,
+											   "projection");
+	gt->uni_color_mouse = gl_shader_get_uniform(gt->mouse_pointer_shader,
+												"color");
+	gt->uni_offset_mouse = gl_shader_get_uniform(gt->mouse_pointer_shader,
+												 "offset");
+
+	if (gl_has_error(gt->mouse_pointer_shader)) {
+		log_warning("cannot create mouse-pointer shader");
+		goto err_mouse_pointer_shader;
+	}
+
 	mode = uterm_display_get_current(txt->disp);
 	gt->sw = uterm_mode_get_width(mode);
 	gt->sh = uterm_mode_get_height(mode);
 
-	txt->cols = gt->sw / FONT_WIDTH(txt);
-	txt->rows = gt->sh / FONT_HEIGHT(txt);
+	if (txt->orientation == ORIENTATION_NORMAL || txt->orientation == ORIENTATION_INVERTED) {
+		txt->cols = gt->sw / FONT_WIDTH(txt);
+		txt->rows = gt->sh / FONT_HEIGHT(txt);
+	} else if (txt->orientation == ORIENTATION_RIGHT || txt->orientation == ORIENTATION_LEFT) {
+		txt->cols = gt->sh / FONT_WIDTH(txt);
+		txt->rows = gt->sw / FONT_HEIGHT(txt);
+	}
 
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &s);
 	if (s <= 0)
@@ -223,6 +282,8 @@ static int gltex_set(struct kmscon_text *txt)
 
 	return 0;
 
+err_mouse_pointer_shader:
+	gl_shader_unref(gt->mouse_pointer_shader);
 err_shader:
 	gl_shader_unref(gt->shader);
 err_bold_htable:
@@ -523,6 +584,43 @@ err_free:
 	return ret;
 }
 
+static int gltex_rotate(struct kmscon_text *txt, unsigned int orientation)
+{
+	struct gltex *gt = txt->data;
+	int ret = 0;
+
+	txt->orientation = orientation;
+
+	if (txt->orientation == ORIENTATION_NORMAL || txt->orientation == ORIENTATION_INVERTED) {
+		txt->cols = gt->sw / FONT_WIDTH(txt);
+		txt->rows = gt->sh / FONT_HEIGHT(txt);
+	} else if (txt->orientation == ORIENTATION_RIGHT || txt->orientation == ORIENTATION_LEFT) {
+		txt->cols = gt->sh / FONT_WIDTH(txt);
+		txt->rows = gt->sw / FONT_HEIGHT(txt);
+	}
+
+	if (txt->orientation == ORIENTATION_NORMAL ) {
+		gt->angle = .0;
+	} else if (txt->orientation == ORIENTATION_INVERTED) {
+		gt->angle = 180.;
+	} else if (txt->orientation == ORIENTATION_RIGHT) {
+		gt->angle = 90.;
+	} else if (txt->orientation == ORIENTATION_LEFT) {
+		gt->angle = -90.;
+	}
+
+	if (txt->orientation == ORIENTATION_NORMAL || txt->orientation == ORIENTATION_INVERTED) {
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
+	} else if (txt->orientation == ORIENTATION_RIGHT || txt->orientation == ORIENTATION_LEFT) {
+		float aspect = (float) gt->sw / (float) gt->sh;
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt) * aspect;
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt) * (1./aspect);
+	}
+
+	return ret;
+}
+
 static int gltex_prepare(struct kmscon_text *txt)
 {
 	struct gltex *gt = txt->data;
@@ -540,8 +638,24 @@ static int gltex_prepare(struct kmscon_text *txt)
 		atlas->cache_num = 0;
 	}
 
-	gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
-	gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
+	if (txt->orientation == ORIENTATION_NORMAL ) {
+		gt->angle = .0;
+	} else if (txt->orientation == ORIENTATION_INVERTED) {
+		gt->angle = 180.;
+	} else if (txt->orientation == ORIENTATION_RIGHT) {
+		gt->angle = 90.;
+	} else if (txt->orientation == ORIENTATION_LEFT) {
+		gt->angle = -90.;
+	}
+
+	if (txt->orientation == ORIENTATION_NORMAL || txt->orientation == ORIENTATION_INVERTED) {
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
+	} else if (txt->orientation == ORIENTATION_RIGHT || txt->orientation == ORIENTATION_LEFT) {
+		float aspect = (float) gt->sw / (float) gt->sh;
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt) * aspect;
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt) * (1./aspect);
+	}
 
 	return 0;
 }
@@ -648,6 +762,7 @@ static int gltex_render(struct kmscon_text *txt)
 
 	gl_m4_identity(mat);
 	glUniformMatrix4fv(gt->uni_proj, 1, GL_FALSE, mat);
+	glUniform1f(gt->uni_orientation, gt->angle);
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
@@ -686,6 +801,70 @@ static int gltex_render(struct kmscon_text *txt)
 	return 0;
 }
 
+static int gltex_render_pointer(struct kmscon_text *txt, int cursor_x, int cursor_y)
+{
+	struct gltex *gt = txt->data;
+	float mat[16];
+
+	gl_clear_error();
+
+	gl_shader_use(gt->mouse_pointer_shader);
+
+	GLfloat pixel_w = .0f;
+	GLfloat pixel_h = .0f;
+	GLfloat hw = .0f;
+	GLfloat hh = .0f;
+
+	if (txt->orientation == ORIENTATION_NORMAL || txt->orientation == ORIENTATION_INVERTED) {
+		pixel_w = 2.0f/gt->sw;
+		pixel_h = 2.0f/gt->sh;
+		hw = FONT_WIDTH(txt)*pixel_w*.5f;
+		hh = FONT_HEIGHT(txt)*pixel_h*.5f;
+	} else if (txt->orientation == ORIENTATION_RIGHT || txt->orientation == ORIENTATION_LEFT) {
+		pixel_w = 2.0f/gt->sh;
+		pixel_h = 2.0f/gt->sw;
+		hw = FONT_WIDTH(txt)*pixel_w*.5f;
+		hh = FONT_HEIGHT(txt)*pixel_h*.5f;
+	}
+
+	mouse_block_vertices[0] = -hw; // top-left
+	mouse_block_vertices[1] =  hh;
+	mouse_block_vertices[2] =  hw - pixel_w; // top-right
+	mouse_block_vertices[3] =  hh;
+	mouse_block_vertices[4] = -hw; // bottom-left
+	mouse_block_vertices[5] = -hh + pixel_h;
+	mouse_block_vertices[6] =  hw - pixel_w; // bottom-right
+	mouse_block_vertices[7] = -hh + pixel_h;
+
+	glViewport(0, 0, gt->sw, gt->sh);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	gl_m4_identity(mat);
+	glUniformMatrix4fv(gt->uni_proj_mouse, 1, GL_FALSE, mat);
+	glUniform1f(gt->uni_orientation_mouse, gt->angle);
+
+	GLfloat top_left[2] = {-1.f, 1.f};
+	GLfloat x = top_left[0] + hw + cursor_x*FONT_WIDTH(txt)*pixel_w;
+	GLfloat y = top_left[1] - hh - cursor_y*FONT_HEIGHT(txt)*pixel_h;
+	glUniform2f(gt->uni_offset_mouse, x, y);
+
+	glEnableVertexAttribArray(0);
+
+	// block-cursor outline
+	glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, mouse_block_vertices);
+	glUniform4f(gt->uni_color_mouse, 1.f, .5f, .25f, .9f);
+	glDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, mouse_block_outline_indices);
+
+	// block-cursor fill
+	glUniform4f(gt->uni_color_mouse, 1.f, .5f, .25f, .35f);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, mouse_block_fill_indices);
+
+	glDisableVertexAttribArray(0);
+
+	return 0;
+}
+
 struct kmscon_text_ops kmscon_text_gltex_ops = {
 	.name = "gltex",
 	.owner = NULL,
@@ -693,8 +872,10 @@ struct kmscon_text_ops kmscon_text_gltex_ops = {
 	.destroy = gltex_destroy,
 	.set = gltex_set,
 	.unset = gltex_unset,
+	.rotate = gltex_rotate,
 	.prepare = gltex_prepare,
 	.draw = gltex_draw,
 	.render = gltex_render,
+	.render_pointer = gltex_render_pointer,
 	.abort = NULL,
 };
