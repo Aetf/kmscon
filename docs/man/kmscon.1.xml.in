@@ -379,7 +379,7 @@
         <term><option>--grab-zoom-in {grab}</option></term>
         <listitem>
           <para>Increase font size of the current terminal.
-                (default: &lt;Ctrl&gt;Plus)</para>
+                (default: &lt;Ctrl&gt;equal)</para>
         </listitem>
       </varlistentry>
 
