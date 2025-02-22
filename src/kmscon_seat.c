@@ -1203,6 +1203,10 @@ int kmscon_session_set_background(struct kmscon_session *sess)
 	return 0;
 }
 
+bool kmscon_session_get_foreground(struct kmscon_session *sess) {
+	return sess->foreground;
+}
+
 void kmscon_session_schedule(struct kmscon_session *sess)
 {
 	struct kmscon_seat *seat;

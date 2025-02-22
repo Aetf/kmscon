@@ -114,6 +114,7 @@ bool kmscon_session_is_registered(struct kmscon_session *sess);
 bool kmscon_session_is_active(struct kmscon_session *sess);
 int kmscon_session_set_foreground(struct kmscon_session *sess);
 int kmscon_session_set_background(struct kmscon_session *sess);
+bool kmscon_session_get_foreground(struct kmscon_session *sess);
 void kmscon_session_schedule(struct kmscon_session *sess);
 
 void kmscon_session_enable(struct kmscon_session *sess);
