@@ -191,6 +191,10 @@ foreach filename, kwargs : {
     'install_dir': bindir,
     'install_mode': 'rwxr-xr-x',
   },
+  'scripts/kmscon-launch-gui.sh': {
+    'install_dir': bindir,
+    'install_mode': 'rwxr-xr-x',
+  },
   'docs/kmscon.service.in': {
     'install_dir': systemdsystemunitdir,
     'install_mode': 'rw-r--r--',
