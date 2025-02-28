@@ -184,24 +184,24 @@ static void monitor_sd_seat_poll(struct uterm_monitor *mon)
 	monitor_sd_seat_event(mon->seat.fd, EV_READABLE, mon);
 }
 
-static int monitor_sd_init(struct uterm_monitor *mon, struct uterm_sd_mon sd_mon, char *event_type, ev_fd_cb cb)
+static int monitor_sd_init(struct uterm_monitor *mon, struct uterm_sd_mon *sd_mon, char *event_type, ev_fd_cb cb)
 {
 	int ret, sfd;
 	
-	ret = uterm_sd_new(&sd_mon.sd, event_type);
+	ret = uterm_sd_new(&sd_mon->sd, event_type);
 	if (ret == -EOPNOTSUPP)
 		return 0;
 	else if (ret)
 		return ret;
 
-	sfd = uterm_sd_get_fd(sd_mon.sd);
+	sfd = uterm_sd_get_fd(sd_mon->sd);
 	if (sfd < 0) {
 		log_err("cannot get systemd login monitor fd");
 		ret = -EFAULT;
 		goto err_sd;
 	}
 
-	ret = ev_eloop_new_fd(mon->eloop, &sd_mon.fd, sfd, EV_READABLE,
+	ret = ev_eloop_new_fd(mon->eloop, &sd_mon->fd, sfd, EV_READABLE,
 			      cb, mon);
 	if (ret)
 		goto err_sd;
@@ -209,7 +209,7 @@ static int monitor_sd_init(struct uterm_monitor *mon, struct uterm_sd_mon sd_mon
 	return 0;
 
 err_sd:
-	uterm_sd_free(sd_mon.sd);
+	uterm_sd_free(sd_mon->sd);
 	return ret;
 }
 
@@ -830,10 +830,10 @@ int uterm_monitor_new(struct uterm_monitor **out,
 	mon->data = data;
 	shl_dlist_init(&mon->seats);
 
-	ret = monitor_sd_init(mon, mon->seat, "seat", monitor_sd_seat_event);
+	ret = monitor_sd_init(mon, &mon->seat, "seat", monitor_sd_seat_event);
 	if (ret)
 		goto err_free;
-	ret = monitor_sd_init(mon, mon->session, "session", monitor_sd_session_event);
+	ret = monitor_sd_init(mon, &mon->session, "session", monitor_sd_session_event);
 	if (ret)
 		goto err_sd_seat;
 
