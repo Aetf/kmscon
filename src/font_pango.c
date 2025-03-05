@@ -403,6 +403,13 @@ static int kmscon_font_pango_init(struct kmscon_font *out,
 
 	log_debug("loading pango font %s", out->attr.name);
 
+	// glib creates a thread but we haven't blocked SIGCHLD yet
+	// (by signal_new) so it might go to glib instead of our signalfd.
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGCHLD);
+	pthread_sigmask(SIG_BLOCK, &mask, NULL);
+
 	ret = manager_get_face(&face, &out->attr);
 	if (ret)
 		return ret;
