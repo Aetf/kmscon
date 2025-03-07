@@ -5,6 +5,6 @@ if [ "$#" -eq 0 ]; then
     exit 1
 fi
 
-printf "\x1B]drmDropMaster\a"
+printf "\x1B]setBackground\a"
 eval "${@:1}"
-printf "\x1B]drmSetMaster\a"
+printf "\x1B]setForeground\a"

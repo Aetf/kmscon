@@ -196,12 +196,12 @@ static void osc_event(struct tsm_vte *vte, const char *osc_string,
 {
 	struct kmscon_terminal *term = data;
 
-	if (strcmp(osc_string, "drmDropMaster") == 0) {
-		log_info("Got OSC drmDropMaster");
+	if (strcmp(osc_string, "setBackground") == 0) {
+		log_info("Got OSC setBackground");
 		kmscon_session_set_background(term->session);
 	}
-	else if (strcmp(osc_string, "drmSetMaster") == 0) {
-		log_info("Got OSC drmSetMaster");
+	else if (strcmp(osc_string, "setForeground") == 0) {
+		log_info("Got OSC setForeground");
 		kmscon_session_set_foreground(term->session);
 	}
 }
@@ -662,9 +662,9 @@ int kmscon_terminal_register(struct kmscon_session **out,
 
 	tsm_vte_set_backspace_sends_delete(term->vte,
 					   BUILD_BACKSPACE_SENDS_DELETE);
-	
+
 	tsm_vte_set_osc_cb(term->vte, osc_event, (void *)term);
-	
+
 	ret = tsm_vte_set_palette(term->vte, term->conf->palette);
 	if (ret)
 		goto err_vte;

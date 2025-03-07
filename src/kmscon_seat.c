@@ -1203,7 +1203,8 @@ int kmscon_session_set_background(struct kmscon_session *sess)
 	return 0;
 }
 
-bool kmscon_session_get_foreground(struct kmscon_session *sess) {
+bool kmscon_session_get_foreground(struct kmscon_session *sess)
+{
 	return sess->foreground;
 }
 
