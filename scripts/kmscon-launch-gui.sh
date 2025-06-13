@@ -10,7 +10,12 @@ if [ -d /sys/class/tty/tty0 ]; then
     kms_tty=$(cat /sys/class/tty/tty0/active)
 fi
 
-printf "\x1B]setBackground\a"
+if [ "${TERM_PROGRAM}" != "tmux" ]; then
+    printf "\x1B]setBackground\a"
+else
+    printf "\033Ptmux;\033\033]setBackground\a\033\\"
+fi
+
 eval "${@:1}"
 
 # If the current tty has changed, wait until the user switches back.
@@ -20,4 +25,9 @@ if [ -n "${kms_tty}" ]; then
     done
 fi
 
-printf "\x1B]setForeground\a"
+if [ "${TERM_PROGRAM}" != "tmux" ]; then
+    printf "\x1B]setForeground\a"
+else
+    printf "\033Ptmux;\033\033]setForeground\a\033\\"
+fi
+
