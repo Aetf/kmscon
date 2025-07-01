@@ -1,5 +1,22 @@
 = KMSCON Release News =
 
+CHANGES WITH 9.1.0:
+	* New features!
+	    - Add selinux permissions (#109)
+	    - Add argument to set the resolution (#71)
+	    - Use current KMS videomode by default (#66)
+	    - Add elogind support (#67)
+	    - Allow quoting to preserve spaces in the login option in config file (#59)
+	    - Make code sent by backspace key configurable (#55)
+
+	* Bug fixes
+	    - Fix running with simpledrm
+	    - Fix default x11 keyboard layout
+	    - Fix the login shell not restarting
+	    - Fix systemd unit file
+
+	* Update unifont to 16.0.01
+
 CHANGES WITH 9.0.0:
 	* Modernized build system from autotools to meson.
 
