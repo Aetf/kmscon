@@ -233,7 +233,7 @@ endif
 #
 
 # conf as a standalone library for use in tests
-conf = static_library('conf', 'conf.c')
+conf = static_library('conf', 'conf.c', dependencies: [xkbcommon_deps])
 conf_deps = declare_dependency(
   link_with: [conf],
   include_directories: [include_directories('.')]
