@@ -1,0 +1,47 @@
+name: Meson
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  build:
+    name: Ubuntu tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Print env
+      run: |
+        echo github.event.action: ${{ github.event.action }}
+        echo github.event_name: ${{ github.event_name }}
+
+    - name: Install dependencies on Ubuntu
+      run: sudo apt-get install -y meson cmake check libudev-dev libxkbcommon-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles-dev libpango1.0-dev libsystemd-dev jq
+
+    - name: Compile and install libtsm
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        LIBTSM: "https://api.github.com/repos/Aetf/libtsm/releases/latest"
+      run: |
+        tar_url=$(curl -s --request GET --header "Authorization: Bearer $GH_TOKEN" --url $LIBTSM | jq -r .tarball_url)
+        curl --request GET -s -L -o libtsm.tar.gz --header "Authorization: Bearer $GH_TOKEN" --url $tar_url
+        mkdir libtsm
+        tar -xf libtsm.tar.gz -C libtsm --strip 1
+        cd libtsm
+        cmake -Bbuilddir
+        cmake --build builddir
+        sudo cmake --install builddir
+
+    - name: Configure Meson
+      run: meson setup build
+
+    - name: Build
+      working-directory: ./build
+      run: meson compile
+
+    - name: Test
+      working-directory: ./build
+      run: meson test
+
