@@ -1128,6 +1128,10 @@ int kmscon_session_set_foreground(struct kmscon_session *sess)
 
 	seat = sess->seat;
 	if (seat && seat->current_sess == sess && !seat->foreground) {
+		ret = uterm_vt_restore(seat->vt);
+		if (ret)
+			return ret;
+
 		ret = seat_go_foreground(seat, true);
 		if (ret)
 			return ret;

@@ -304,6 +304,41 @@ static int open_tty(const char *dev, int *tty_fd, int *tty_num)
 	return 0;
 }
 
+static int real_restore(struct uterm_vt *vt)
+{
+	int ret;
+	struct vt_mode mode;
+
+	if (ioctl(vt->real_fd, KDSETMODE, KD_GRAPHICS)) {
+		log_err("cannot put VT in graphics mode (%d): %m", errno);
+		ret = -errno;
+		return ret;
+	}
+
+	memset(&mode, 0, sizeof(mode));
+	mode.mode = VT_PROCESS;
+	mode.acqsig = SIGUSR1;
+	mode.relsig = SIGUSR2;
+
+	if (ioctl(vt->real_fd, VT_SETMODE, &mode)) {
+		log_err("cannot take control of vt handling (%d): %m", errno);
+		ret = -errno;
+		return ret;
+	}
+
+	ret = ioctl(vt->real_fd, KDSKBMODE, K_RAW);
+	if (ret) {
+		log_error("cannot set VT KBMODE to K_RAW (%d): %m", errno);
+		ret = -EFAULT;
+		return ret;
+	}
+
+	ret = ioctl(vt->real_fd, KDSKBMODE, K_OFF);
+	if (ret)
+		log_warning("cannot set VT KBMODE to K_OFF (%d): %m", errno);
+	return ret;
+}
+
 static int real_open(struct uterm_vt *vt, const char *vt_name)
 {
 	struct vt_mode mode;
@@ -965,6 +1000,18 @@ int uterm_vt_deactivate(struct uterm_vt *vt)
 		return real_deactivate(vt);
 	else
 		return fake_deactivate(vt);
+}
+
+SHL_EXPORT
+int uterm_vt_restore(struct uterm_vt *vt)
+{
+	if (!vt || !vt->vtm)
+		return -EINVAL;
+
+	if (vt->mode == UTERM_VT_REAL)
+		return real_restore(vt);
+	else
+		return 0;
 }
 
 SHL_EXPORT
