@@ -734,7 +734,8 @@ int uterm_drm_video_hotplug(struct uterm_video *video,
 			disp->flags |= DISPLAY_AVAILABLE;
 
 			// Clean up kms hardware cursor from display sessions that don't properly clean themselves up`
-			drmModeSetCursor(vdrm->fd, ddrm->crtc_id, 0, 0, 0);
+			if (drmModeSetCursor(vdrm->fd, ddrm->crtc_id, 0, 0, 0))
+				log_warn("cannot hide hardware cursor");
 
 			if (!display_is_online(disp))
 				break;
