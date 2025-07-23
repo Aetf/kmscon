@@ -285,14 +285,16 @@ exec_child(const char *term, const char *colorterm, char **argv,
 	exit(EXIT_FAILURE);
 }
 
-static void setup_child(int master, struct winsize *ws)
+static void setup_child(int master, struct winsize *ws, char **argv)
 {
 	int ret;
 	sigset_t sigset;
 	pid_t pid;
 	char slave_name[128];
+	char *slave_name_dup;
 	int slave = -1, i;
 	struct termios attr;
+	const char pts_pattern[] = "{ptsname}";
 
 	/* The child should not inherit our signal mask. */
 	sigemptyset(&sigset);
@@ -333,6 +335,16 @@ static void setup_child(int master, struct winsize *ws)
 	if (slave < 0) {
 		log_err("cannot open slave: %m");
 		goto err_out;
+	}
+
+	slave_name_dup = strdup(slave_name);
+	if (!strncmp(slave_name, "/dev/", 5))
+		slave_name_dup += 5;
+
+	/* Replace pts patterns in argv */
+	for (int i = 0; argv[i] != NULL; i++) {
+		if (!strncmp(argv[i], pts_pattern, strlen(pts_pattern))
+			argv[i] = slave_name_dup;
 	}
 
 	/* get terminal attributes */
@@ -401,7 +413,7 @@ static int pty_spawn(struct kmscon_pty *pty, int master,
 		log_err("cannot fork: %m");
 		return -errno;
 	case 0:
-		setup_child(master, &ws);
+		setup_child(master, &ws, pty->argv);
 		exec_child(pty->term, pty->colorterm, pty->argv, pty->seat,
 			   pty->vtnr, pty->env_reset);
 		exit(EXIT_FAILURE);
