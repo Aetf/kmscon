@@ -338,12 +338,17 @@ static void setup_child(int master, struct winsize *ws, char **argv)
 	}
 
 	slave_name_dup = strdup(slave_name);
+	if (!slave_name_dup) {
+		log_err("cannot dup slave_name");
+		goto err_out;
+	}
+	
 	if (!strncmp(slave_name, "/dev/", 5))
 		slave_name_dup += 5;
 
 	/* Replace pts patterns in argv */
 	for (int i = 0; argv[i] != NULL; i++) {
-		if (!strncmp(argv[i], pts_pattern, strlen(pts_pattern))
+		if (!strncmp(argv[i], pts_pattern, strlen(pts_pattern)))
 			argv[i] = slave_name_dup;
 	}
 
