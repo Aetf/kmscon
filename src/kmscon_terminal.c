@@ -575,7 +575,7 @@ static void pty_input(struct kmscon_pty *pty, const char *u8, size_t len,
 {
 	struct kmscon_terminal *term = data;
 
-	if (!len) {
+	if (!len && term->conf->restart) {
 		terminal_close(term);
 		terminal_open(term);
 	} else {
