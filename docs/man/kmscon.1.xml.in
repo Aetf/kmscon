@@ -228,6 +228,13 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>--restart</option></term>
+        <listitem>
+          <para>Restart the login process on exit. (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>-t {term}</option></term>
         <term><option>--term {term}</option></term>
         <listitem>

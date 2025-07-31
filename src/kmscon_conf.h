@@ -87,6 +87,8 @@ struct kmscon_conf_t {
 	bool login;
 	/* argv for login process */
 	char **argv;
+	/* restart login process */
+	bool restart;
 	/* TERM value */
 	char *term;
 	/* reset environment */
