@@ -392,6 +392,17 @@ static void manager_put_face(struct face *face)
 	manager_unlock();
 }
 
+static void block_sigchild(void)
+{
+	// glib creates a thread but we haven't blocked SIGCHLD yet
+	// (by signal_new) so it might go to glib instead of our signalfd.
+	sigset_t mask;
+
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGCHLD);
+	pthread_sigmask(SIG_BLOCK, &mask, NULL);
+}
+
 static int kmscon_font_pango_init(struct kmscon_font *out,
 				  const struct kmscon_font_attr *attr)
 {
@@ -403,12 +414,7 @@ static int kmscon_font_pango_init(struct kmscon_font *out,
 
 	log_debug("loading pango font %s", out->attr.name);
 
-	// glib creates a thread but we haven't blocked SIGCHLD yet
-	// (by signal_new) so it might go to glib instead of our signalfd.
-	sigset_t mask;
-	sigemptyset(&mask);
-	sigaddset(&mask, SIGCHLD);
-	pthread_sigmask(SIG_BLOCK, &mask, NULL);
+	block_sigchild();
 
 	ret = manager_get_face(&face, &out->attr);
 	if (ret)
