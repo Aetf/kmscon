@@ -34,7 +34,6 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/signalfd.h>
-#include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
 #include "eloop.h"
@@ -442,33 +441,6 @@ static int send_buf(struct kmscon_pty *pty)
 	return 0;
 }
 
-/*
- * Sometime, the SIGHUP handler is not called, but kmscon still receives a HUP
- * from the file descriptor. Handle it, to avoid hanging forever on a defunct
- * child.
- */
-static void handle_hup(struct kmscon_pty *pty) {
-	pid_t pid;
-	int status;
-
-	pid = waitpid(-1, &status, WNOHANG);
-	log_debug("waitpid returned %d, status %08x\n", pid, status);
-	if (pid == pty->child) {
- 		if (WIFEXITED(status)) {
-			if (WEXITSTATUS(status) != 0)
-				log_warn("child %d exited with status %d",
-					 pid, WEXITSTATUS(status));
-			else
-				log_info("child %d exited successfully",
-					 pid);
-		} else if (WIFSIGNALED(status)) {
-			log_warn("child %d exited by signal %d", pid,
-				 WTERMSIG(status));
-		}
-		pty->input_cb(pty, NULL, 0, pty->data);
-	}
-}
-
 static int read_buf(struct kmscon_pty *pty)
 {
 	ssize_t len, num;
@@ -490,10 +462,6 @@ static int read_buf(struct kmscon_pty *pty)
 		} else if (errno != EWOULDBLOCK) {
 			log_debug("cannot read from pty of child %d (%d): %m",
 				  pty->child, errno);
-			/* In case the error is because the child already exited, 
-			 * check that the child is still alive.
-			 */
-			handle_hup(pty);
 			break;
 		}
 	} while (len > 0 && --num);
@@ -535,7 +503,7 @@ static void pty_input(struct ev_fd *fd, int mask, void *data)
 	if (mask & EV_ERR)
 		log_warn("error on pty socket of child %d", pty->child);
 	if (mask & EV_HUP)
-		handle_hup(pty);
+		log_debug("HUP on pty of child %d", pty->child);
 	if (mask & EV_WRITEABLE)
 		send_buf(pty);
 	if (mask & EV_READABLE)
