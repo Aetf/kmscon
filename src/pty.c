@@ -285,6 +285,63 @@ exec_child(const char *term, const char *colorterm, char **argv,
 	exit(EXIT_FAILURE);
 }
 
+static void login_substitution(char **argv, char *slave_name) {
+	const char pts_prefix[] = "/dev/pts/";
+	const char pts_pattern[] = "{pts_number}";
+	const int pattern_len = strlen(pts_pattern);
+	int slave_len, i, count, new_len, j, prefix_len, remaining_len;
+	char *src, *ptr, *new_str, *src_ptr, *dest_ptr, *match;
+
+	if (!strncmp(slave_name, pts_prefix, strlen(pts_prefix)))
+		slave_name += strlen(pts_prefix);
+
+	slave_len = strlen(slave_name);
+
+	/* Replace pts patterns in argv */
+	for (i = 0; argv[i] != NULL; i++) {
+		src = argv[i];
+		count = 0;
+		ptr = src;
+		while ((ptr = strstr(ptr, pts_pattern)) != NULL) {
+			count++;
+			ptr += pattern_len;
+		}
+
+		if (count == 0)
+			continue;
+
+		new_len = strlen(src) + (size_t)(count * (slave_len - pattern_len) + 1);
+		new_str = malloc(new_len);
+		if (!new_str) {
+			log_err("malloc failed for new_str");
+			return;
+		}
+
+		src_ptr = src;
+		dest_ptr = new_str;
+		for (j = 0; j < count; j++) {
+			match = strstr(src_ptr, pts_pattern);
+
+			prefix_len = match - src_ptr;
+			memcpy(dest_ptr, src_ptr, prefix_len);
+			dest_ptr += prefix_len;
+
+			memcpy(dest_ptr, slave_name, slave_len);
+			dest_ptr += slave_len;
+
+			src_ptr = match + pattern_len;
+		}
+
+		remaining_len = strlen(src_ptr);
+		memcpy(dest_ptr, src_ptr, remaining_len);
+		dest_ptr += remaining_len;
+		*dest_ptr = '\0';
+
+		argv[i] = new_str;
+	}
+
+}
+
 static void setup_child(int master, struct winsize *ws, char **argv)
 {
 	int ret;
@@ -294,7 +351,6 @@ static void setup_child(int master, struct winsize *ws, char **argv)
 	char *slave_name_dup;
 	int slave = -1, i;
 	struct termios attr;
-	const char pts_pattern[] = "{ptsname}";
 
 	/* The child should not inherit our signal mask. */
 	sigemptyset(&sigset);
@@ -342,16 +398,8 @@ static void setup_child(int master, struct winsize *ws, char **argv)
 		log_err("cannot dup slave_name");
 		goto err_out;
 	}
+	login_substitution(argv, slave_name_dup);
 	
-	if (!strncmp(slave_name, "/dev/", 5))
-		slave_name_dup += 5;
-
-	/* Replace pts patterns in argv */
-	for (int i = 0; argv[i] != NULL; i++) {
-		if (!strncmp(argv[i], pts_pattern, strlen(pts_pattern)))
-			argv[i] = slave_name_dup;
-	}
-
 	/* get terminal attributes */
 	if (tcgetattr(slave, &attr) < 0) {
 		log_err("cannot get terminal attributes: %m");
