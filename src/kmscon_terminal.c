@@ -578,7 +578,7 @@ static void pty_input(struct kmscon_pty *pty, const char *u8, size_t len,
 	if (!len && term->conf->restart) {
 		terminal_close(term);
 		terminal_open(term);
-	} else {
+	} else if (len) {
 		tsm_vte_input(term->vte, u8, len);
 		redraw_all(term);
 	}
