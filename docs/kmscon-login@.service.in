@@ -4,12 +4,9 @@ Documentation=man:kmscon(1)
 ConditionPathExists=/dev/pts/%I
 
 [Service]
-ExecStart=/sbin/agetty -o '-p -- \\u' --noclear -- -
+ExecStart=/sbin/agetty -o '-p -- \\u' --noclear pts/%I -
 Restart=always
 RestartSec=0
-StandardInput=tty
-StandardOutput=tty
-TTYPath=/dev/pts/%I
 TTYReset=yes
 TTYVHangup=yes
 IgnoreSIGPIPE=no
