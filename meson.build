@@ -199,6 +199,10 @@ foreach filename, kwargs : {
     'install_dir': systemdsystemunitdir,
     'install_mode': 'rw-r--r--',
   },
+  'docs/kmscon-login@.service.in': {
+    'install_dir': systemdsystemunitdir,
+    'install_mode': 'rw-r--r--',
+  },
 }
   install_data(configure_file(input: filename, output: '@BASENAME@', configuration: dirs_info),
     kwargs: kwargs,

@@ -1,0 +1,16 @@
+[Unit]
+Description=KMS System Console login program on /dev/pts/%I
+Documentation=man:kmscon(1)
+ConditionPathExists=/dev/pts/%I
+
+[Service]
+ExecStart=/sbin/agetty -o '-p -- \\u' --noclear -- -
+Restart=always
+RestartSec=0
+StandardInput=tty
+StandardOutput=tty
+TTYPath=/dev/pts/%I
+TTYReset=yes
+TTYVHangup=yes
+IgnoreSIGPIPE=no
+SendSIGHUP=yes
