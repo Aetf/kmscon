@@ -28,6 +28,11 @@ For font handling the following is required:
 For multi-seat support you need the following packages:
 - systemd: Actually only the systemd-logind daemon and library is required.
 
+On Debian-based system, to install the systemd service files in the right location, you need to install systemd-dev.
+```bash
+sudo apt install systemd-dev
+```
+
 ## Download
 
 Released tarballs can be found at: https://github.com/Aetf/kmscon/releases
