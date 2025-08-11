@@ -1,6 +1,0 @@
-policy_module(kmscon,1.0)
-
-require {
-type shell_exec_t;
-}
-
