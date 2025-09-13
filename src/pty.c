@@ -47,7 +47,7 @@
 
 #define KMSCON_NREAD 16384
 
-#define MAX_RETRY_TIME 10
+#define MAX_RETRY_TIME 2
 #define MAX_RETRY_COUNT 5
 
 struct kmscon_pty {
@@ -70,7 +70,7 @@ struct kmscon_pty {
 	char *vtnr;
 	bool env_reset;
 
-	time_t spawn_time;
+	time_t last_spawn_time;
 	int retry_count;
 };
 
@@ -91,7 +91,7 @@ int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb,
 	pty->fd = -1;
 	pty->ref = 1;
 	pty->input_cb = input_cb;
-	pty->spawn_time = time(NULL);
+	pty->last_spawn_time = time(NULL);
 	pty->retry_count = 0;
 	pty->data = data;
 
@@ -523,6 +523,7 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld,
 			void *data)
 {
 	struct kmscon_pty *pty = data;
+	time_t current_time;
 
 	if (chld->pid != pty->child)
 		return;
@@ -530,13 +531,19 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld,
 	log_info("child exited: pid: %u status: %d",
 		 chld->pid, chld->status);
 
-	if (pty->retry_count >= MAX_RETRY_COUNT) {
+	if (pty->retry_count == MAX_RETRY_COUNT) {
 		log_err("reached max retry attempts for login process");
 		return;
 	}
 
-	if (time(NULL) - pty->spawn_time < MAX_RETRY_TIME)
+	current_time = time(NULL);
+
+	if (current_time - pty->last_spawn_time < MAX_RETRY_TIME) {
 		pty->retry_count++;
+		pty->last_spawn_time = current_time;
+	} else {
+		pty->retry_count = 0;
+	}
 
 	pty->input_cb(pty, NULL, 0, pty->data);
 }
