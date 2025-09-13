@@ -35,6 +35,7 @@
 #include <sys/ioctl.h>
 #include <sys/signalfd.h>
 #include <termios.h>
+#include <time.h>
 #include <unistd.h>
 #include "eloop.h"
 #include "pty.h"
@@ -45,6 +46,9 @@
 #define LOG_SUBSYSTEM "pty"
 
 #define KMSCON_NREAD 16384
+
+#define MAX_RETRY_TIME 2
+#define MAX_RETRY_COUNT 5
 
 struct kmscon_pty {
 	unsigned long ref;
@@ -65,6 +69,9 @@ struct kmscon_pty {
 	char *seat;
 	char *vtnr;
 	bool env_reset;
+
+	time_t last_spawn_time;
+	int retry_count;
 };
 
 int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb,
@@ -84,6 +91,8 @@ int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb,
 	pty->fd = -1;
 	pty->ref = 1;
 	pty->input_cb = input_cb;
+	pty->last_spawn_time = time(NULL);
+	pty->retry_count = 0;
 	pty->data = data;
 
 	ret = ev_eloop_new(&pty->eloop, log_llog, NULL);
@@ -514,12 +523,27 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld,
 			void *data)
 {
 	struct kmscon_pty *pty = data;
+	time_t current_time;
 
 	if (chld->pid != pty->child)
 		return;
 
 	log_info("child exited: pid: %u status: %d",
 		 chld->pid, chld->status);
+
+	if (pty->retry_count == MAX_RETRY_COUNT) {
+		log_err("reached max retry attempts for login process");
+		return;
+	}
+
+	current_time = time(NULL);
+
+	if (current_time - pty->last_spawn_time < MAX_RETRY_TIME) {
+		pty->retry_count++;
+		pty->last_spawn_time = current_time;
+	} else {
+		pty->retry_count = 0;
+	}
 
 	pty->input_cb(pty, NULL, 0, pty->data);
 }
