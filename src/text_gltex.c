@@ -565,6 +565,9 @@ static int gltex_draw(struct kmscon_text *txt,
 		return ret;
 	atlas = glyph->atlas;
 
+	if (txt->overflow_next)
+		width = glyph->glyph->width;
+
 	if (atlas->cache_num >= atlas->cache_size)
 		return -ERANGE;
 

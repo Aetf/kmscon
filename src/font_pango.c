@@ -115,7 +115,7 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 	struct kmscon_glyph *glyph;
 	PangoLayout *layout;
 	PangoAttrList *attrlist;
-	PangoRectangle rec;
+	PangoRectangle rec, logical_rec;
 	PangoLayoutLine *line;
 	FT_Bitmap bitmap;
 	unsigned int cwidth;
@@ -147,7 +147,6 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 		goto out_unlock;
 	}
 	memset(glyph, 0, sizeof(*glyph));
-	glyph->width = cwidth;
 
 	layout = pango_layout_new(face->ctx);
 	attrlist = pango_layout_get_attributes(layout);
@@ -197,8 +196,10 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 
 	line = pango_layout_get_line_readonly(layout, 0);
 
-	pango_layout_line_get_pixel_extents(line, NULL, &rec);
-	glyph->buf.width = face->real_attr.width * cwidth;
+	pango_layout_line_get_pixel_extents(line, &logical_rec, &rec);
+
+	glyph->width = (logical_rec.width > face->real_attr.width) ? 2 : cwidth;
+	glyph->buf.width = face->real_attr.width * glyph->width;
 	glyph->buf.height = face->real_attr.height;
 	glyph->buf.stride = glyph->buf.width;
 	glyph->buf.format = UTERM_FORMAT_GREY;
@@ -465,6 +466,56 @@ static int kmscon_font_pango_render_inval(struct kmscon_font *font,
 					out);
 }
 
+static bool kmscon_font_pango_get_overflow(struct kmscon_font *font,
+			     const uint32_t *ch,
+				 size_t len)
+{
+	PangoLayout *layout;
+	PangoAttrList *attrlist;
+	PangoRectangle rec, logical_rec;
+	PangoLayoutLine *line;
+	struct face *face = font->data;
+	unsigned int cwidth;
+	size_t ulen, cnt;
+	char *val;
+
+	cwidth = tsm_ucs4_get_width(*ch);
+	if (!cwidth)
+		return false;
+
+	layout = pango_layout_new(face->ctx);
+	attrlist = pango_layout_get_attributes(layout);
+	if (attrlist == NULL) {
+		attrlist = pango_attr_list_new();
+		pango_layout_set_attributes(layout, attrlist);
+		pango_attr_list_unref(attrlist);
+	}
+
+	/* render one line only */
+	pango_layout_set_height(layout, 0);
+
+	/* no line spacing */
+	pango_layout_set_spacing(layout, 0);
+
+	val = tsm_ucs4_to_utf8_alloc(ch, len, &ulen);
+	if (!val) {
+		return false;
+	}
+	pango_layout_set_text(layout, val, ulen);
+	free(val);
+
+	cnt = pango_layout_get_line_count(layout);
+	if (cnt == 0) {
+		return false;
+	}
+
+	line = pango_layout_get_line_readonly(layout, 0);
+
+	pango_layout_line_get_pixel_extents(line, &logical_rec, &rec);
+
+	return (cwidth < 2) && (logical_rec.width > face->real_attr.width);
+}
+
 struct kmscon_font_ops kmscon_font_pango_ops = {
 	.name = "pango",
 	.owner = NULL,
@@ -473,4 +524,5 @@ struct kmscon_font_ops kmscon_font_pango_ops = {
 	.render = kmscon_font_pango_render,
 	.render_empty = kmscon_font_pango_render_empty,
 	.render_inval = kmscon_font_pango_render_inval,
+	.get_overflow = kmscon_font_pango_get_overflow,
 };
