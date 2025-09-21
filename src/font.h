@@ -89,6 +89,9 @@ struct kmscon_font_ops {
 			     const struct kmscon_glyph **out);
 	int (*render_inval) (struct kmscon_font *font,
 			     const struct kmscon_glyph **out);
+	bool (*get_overflow) (struct kmscon_font *font,
+			     const uint32_t *ch,
+				 size_t len);
 };
 
 int kmscon_font_register(const struct kmscon_font_ops *ops);
@@ -107,6 +110,9 @@ int kmscon_font_render_empty(struct kmscon_font *font,
 			     const struct kmscon_glyph **out);
 int kmscon_font_render_inval(struct kmscon_font *font,
 			     const struct kmscon_glyph **out);
+bool kmscon_font_get_overflow(struct kmscon_font *font,
+			     const uint32_t *ch,
+				 size_t len);
 
 /* modularized backends */
 

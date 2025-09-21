@@ -449,13 +449,13 @@ static int tp_draw(struct kmscon_text *txt,
 				       0, 0, 0, 0,
 				       posx * txt->font->attr.width,
 				       posy * txt->font->attr.height,
-				       txt->font->attr.width,
+				       glyph->glyph->buf.width,
 				       txt->font->attr.height);
 	} else {
 		pixman_fill(tp->c_data, tp->c_stride / 4, tp->c_bpp,
 			    posx * txt->font->attr.width,
 			    posy * txt->font->attr.height,
-			    txt->font->attr.width,
+			    glyph->glyph->buf.width,
 			    txt->font->attr.height,
 			    bc);
 
@@ -466,7 +466,7 @@ static int tp_draw(struct kmscon_text *txt,
 				       0, 0, 0, 0,
 				       posx * txt->font->attr.width,
 				       posy * txt->font->attr.height,
-				       txt->font->attr.width,
+				       glyph->glyph->buf.width,
 				       txt->font->attr.height);
 	}
 
