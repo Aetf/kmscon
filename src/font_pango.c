@@ -115,7 +115,7 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 	struct kmscon_glyph *glyph;
 	PangoLayout *layout;
 	PangoAttrList *attrlist;
-	PangoRectangle rec;
+	PangoRectangle rec, logical_rec;
 	PangoLayoutLine *line;
 	FT_Bitmap bitmap;
 	unsigned int cwidth;
@@ -197,8 +197,9 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 
 	line = pango_layout_get_line_readonly(layout, 0);
 
-	pango_layout_line_get_pixel_extents(line, NULL, &rec);
+	pango_layout_line_get_pixel_extents(line, &logical_rec, &rec);
 	glyph->buf.width = face->real_attr.width * cwidth;
+	if (logical_rec.width > glyph->buf.width) glyph->buf.width = logical_rec.width;
 	glyph->buf.height = face->real_attr.height;
 	glyph->buf.stride = glyph->buf.width;
 	glyph->buf.format = UTERM_FORMAT_GREY;
