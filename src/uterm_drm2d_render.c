@@ -101,7 +101,7 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 	uint8_t *dst, *src;
 	unsigned int width, height, i, j;
 	unsigned int sw, sh;
-	uint_fast32_t r, g, b, out;
+	uint_fast32_t r, g, b, out, cr, cg, cb;
 	struct uterm_drm2d_rb *rb;
 	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
 
@@ -135,11 +135,16 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 		else
 			height = req->buf->height;
 
-		dst = rb->map;
-		dst = &dst[req->y * rb->stride + req->x * 4];
+		dst = rb->map + (req->y * rb->stride + req->x * 4);
 		src = req->buf->data;
 
+		uint32_t *line = malloc(width * 4);
+		if (!line)
+			return -ENOMEM;
+
 		while (height--) {
+			memcpy(line, dst, width * 4);
+
 			for (i = 0; i < width; ++i) {
 				/* Division by 255 (t /= 255) is done with:
 				 *   t += 0x80
@@ -150,12 +155,10 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 					r = req->br;
 					g = req->bg;
 					b = req->bb;
-					out = (r << 16) | (g << 8) | b;
 				} else if (src[i] == 255) {
 					r = req->fr;
 					g = req->fg;
 					b = req->fb;
-					out = (r << 16) | (g << 8) | b;
 				} else {
 					r = req->fr * src[i] +
 					    req->br * (255 - src[i]);
@@ -171,14 +174,21 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 					    req->bb * (255 - src[i]);
 					b += 0x80;
 					b = (b + (b >> 8)) >> 8;
-					out = (r << 16) | (g << 8) | b;
 				}
 
-				((uint32_t*)dst)[i] = out;
+				out = line[i];
+				cr = (out >> 16) & 0xff; if (r < cr) r = cr;
+				cg = (out >>  8) & 0xff; if (g < cg) g = cg;
+				cb = (out >>  0) & 0xff; if (b < cb) b = cb;
+				line[i] = (r << 16) | (g << 8) | b;
 			}
+
+			memcpy(dst, line, width * 4);
 			dst += rb->stride;
 			src += req->buf->stride;
 		}
+
+		free(line);
 	}
 
 	return 0;

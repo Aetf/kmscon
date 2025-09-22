@@ -84,12 +84,11 @@ struct kmscon_terminal {
 	struct kmscon_font *bold_font;
 };
 
-static void do_clear_margins(struct screen *scr)
+static void do_clear_screen(struct screen *scr)
 {
-	unsigned int w, h, sw, sh;
+	unsigned int sw, sh;
 	struct uterm_mode *mode;
 	struct tsm_screen_attr attr;
-	int dw, dh;
 
 	mode = uterm_display_get_current(scr->disp);
 	if (!mode)
@@ -97,21 +96,9 @@ static void do_clear_margins(struct screen *scr)
 
 	sw = uterm_mode_get_width(mode);
 	sh = uterm_mode_get_height(mode);
-	w = scr->txt->font->attr.width * scr->txt->cols;
-	h = scr->txt->font->attr.height * scr->txt->rows;
-	dw = sw - w;
-	dh = sh - h;
-
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
 
-	if (dw > 0)
-		uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
-				   w, 0,
-				   dw, h);
-	if (dh > 0)
-		uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
-				   0, h,
-				   sw, dh);
+	uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb, 0, 0, sw, sh);
 }
 
 static int font_set(struct kmscon_terminal *term);
@@ -124,7 +111,7 @@ static void do_redraw_screen(struct screen *scr)
 		return;
 
 	scr->pending = false;
-	do_clear_margins(scr);
+	do_clear_screen(scr);
 
 	kmscon_text_prepare(scr->txt);
 	tsm_screen_draw(scr->term->console, kmscon_text_draw_cb, scr->txt);
