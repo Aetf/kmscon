@@ -171,6 +171,8 @@ static int bbulk_draw(struct kmscon_text *txt,
 		req->bg = attr->bg;
 		req->bb = attr->bb;
 	}
+	if (txt->overflow_next && posx + 1 < txt->cols)
+		bb->reqs[posy * txt->cols + posx + 1].buf = NULL;
 
 	return 0;
 }

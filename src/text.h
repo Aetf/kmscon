@@ -57,6 +57,7 @@ struct kmscon_text {
 	unsigned int cols;
 	unsigned int rows;
 	bool rendering;
+	bool overflow_next;
 };
 
 struct kmscon_text_ops {
