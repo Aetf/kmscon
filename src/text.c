@@ -395,7 +395,7 @@ int kmscon_text_draw(struct kmscon_text *txt,
 
 	previous_overflow = txt->overflow_next;
 	txt->overflow_next = kmscon_font_get_overflow(txt->font, ch, len);
-	if (previous_overflow && !len && posx)
+	if (previous_overflow && !len && posx && !attr->inverse)
 		return 0;
 
 	return txt->ops->draw(txt, id, ch, len, width, posx, posy, attr);
