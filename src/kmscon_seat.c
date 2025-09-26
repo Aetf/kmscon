@@ -777,6 +777,11 @@ int kmscon_seat_new(struct kmscon_seat **out,
 	if (ret)
 		goto err_input_cb;
 
+	if (seat->conf->session_control && uterm_vt_get_type(seat->vt) == UTERM_VT_REAL) {
+		log_warning("session control cannot be configured on real VT, disabling session control");
+		seat->conf->session_control = false;
+	}
+
 	ev_eloop_ref(seat->eloop);
 	uterm_vt_master_ref(seat->vtm);
 	*out = seat;
