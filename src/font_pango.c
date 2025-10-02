@@ -467,53 +467,19 @@ static int kmscon_font_pango_render_inval(struct kmscon_font *font,
 }
 
 static bool kmscon_font_pango_get_overflow(struct kmscon_font *font,
-			     const uint32_t *ch,
-				 size_t len)
+					   uint64_t id,
+					   const uint32_t *ch,
+					   size_t len)
 {
-	PangoLayout *layout;
-	PangoAttrList *attrlist;
-	PangoRectangle rec, logical_rec;
-	PangoLayoutLine *line;
 	struct face *face = font->data;
 	unsigned int cwidth;
-	size_t ulen, cnt;
-	char *val;
+	struct kmscon_glyph *glyph;
+
+	if (get_glyph(face, &glyph, id, ch, len, &font->attr) < 0)
+		return false;
 
 	cwidth = tsm_ucs4_get_width(*ch);
-	if (!cwidth)
-		return false;
-
-	layout = pango_layout_new(face->ctx);
-	attrlist = pango_layout_get_attributes(layout);
-	if (attrlist == NULL) {
-		attrlist = pango_attr_list_new();
-		pango_layout_set_attributes(layout, attrlist);
-		pango_attr_list_unref(attrlist);
-	}
-
-	/* render one line only */
-	pango_layout_set_height(layout, 0);
-
-	/* no line spacing */
-	pango_layout_set_spacing(layout, 0);
-
-	val = tsm_ucs4_to_utf8_alloc(ch, len, &ulen);
-	if (!val) {
-		return false;
-	}
-	pango_layout_set_text(layout, val, ulen);
-	free(val);
-
-	cnt = pango_layout_get_line_count(layout);
-	if (cnt == 0) {
-		return false;
-	}
-
-	line = pango_layout_get_line_readonly(layout, 0);
-
-	pango_layout_line_get_pixel_extents(line, &logical_rec, &rec);
-
-	return (cwidth < 2) && (logical_rec.width > face->real_attr.width);
+	return (glyph->width == 2 && cwidth == 1);
 }
 
 struct kmscon_font_ops kmscon_font_pango_ops = {

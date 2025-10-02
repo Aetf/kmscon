@@ -461,11 +461,11 @@ int kmscon_font_render_inval(struct kmscon_font *font,
  * Returns: true when overflow needed, false when no overflow needed or on error
  */
 bool kmscon_font_get_overflow(struct kmscon_font *font,
-			     const uint32_t *ch,
-				 size_t len)
+			      uint64_t id, const uint32_t *ch,
+			      size_t len)
 {
 	if (!font || !font->ops->get_overflow)
 		return false;
 
-	return font->ops->get_overflow(font, ch, len);
+	return font->ops->get_overflow(font, id, ch, len);
 }
