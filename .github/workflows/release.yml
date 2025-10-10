@@ -22,7 +22,6 @@ jobs:
           sudo apt-get install -y check libudev-dev libxkbcommon-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles-dev libpango1.0-dev libsystemd-dev
       - name: Install libtsm
         run: |
-          pip install cmake
           curl -L -o libtsm.tar.gz $(curl -s https://api.github.com/repos/Aetf/libtsm/releases/latest \
             | grep "tarball_url" \
             | awk '{ print $2 }' \
@@ -31,9 +30,10 @@ jobs:
           mkdir libtsm
           tar -xf libtsm.tar.gz -C libtsm --strip 1
           cd libtsm
-          cmake -Bbuilddir
-          cmake --build builddir
-          sudo cmake --install builddir
+          meson setup build
+          cd build
+          meson compile
+          sudo meson install
       - name: Meson setup
         run: meson setup builddir/
       - name: Create source distribution
