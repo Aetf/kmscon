@@ -89,7 +89,7 @@ static void do_clear_margins(struct screen *scr)
 	unsigned int w, h, sw, sh;
 	struct uterm_mode *mode;
 	struct tsm_screen_attr attr;
-	int dw, dh;
+	int dh, dw;
 
 	mode = uterm_display_get_current(scr->disp);
 	if (!mode)
@@ -97,21 +97,35 @@ static void do_clear_margins(struct screen *scr)
 
 	sw = uterm_mode_get_width(mode);
 	sh = uterm_mode_get_height(mode);
-	w = scr->txt->font->attr.width * scr->txt->cols;
-	h = scr->txt->font->attr.height * scr->txt->rows;
-	dw = sw - w;
-	dh = sh - h;
 
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
 
-	if (dw > 0)
-		uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
-				   w, 0,
-				   dw, h);
-	if (dh > 0)
-		uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
-				   0, h,
-				   sw, dh);
+	if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_UPSIDE_DOWN) {
+		w = scr->txt->font->attr.width * scr->txt->cols;
+		h = scr->txt->font->attr.height * scr->txt->rows;
+	} else {
+		w = scr->txt->font->attr.height * scr->txt->rows;
+		h = scr->txt->font->attr.width * scr->txt->cols;
+	}
+	dw = sw - w;
+	dh = sh - h;
+
+	if (dw) {
+		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_LEFT)
+			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
+				w, 0,dw, sh);
+		else
+			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
+				0, 0,dw, sh);
+	}
+	if (dh) {
+		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_RIGHT)
+			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
+				0, h, sw, dh);
+		else
+		 	uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
+				0, 0, sw, dh);
+	}
 }
 
 static int font_set(struct kmscon_terminal *term);
@@ -303,6 +317,57 @@ static int font_set(struct kmscon_terminal *term)
 	return 0;
 }
 
+static void rotate_cw_screen(struct screen *scr)
+{
+	unsigned int orientation = kmscon_text_get_orientation(scr->txt);
+	orientation = (orientation + 1) % (OR_LEFT + 1);
+	kmscon_text_rotate(scr->txt, orientation);
+}
+
+static void rotate_cw_all(struct kmscon_terminal *term)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+
+	shl_dlist_for_each(iter, &term->screens) {
+		scr = shl_dlist_entry(iter, struct screen, list);
+		rotate_cw_screen(scr);
+		term->min_cols = 0;
+		term->min_rows = 0;
+		terminal_resize(term,
+				kmscon_text_get_cols(scr->txt),
+				kmscon_text_get_rows(scr->txt),
+				true, true);
+	}
+}
+
+static void rotate_ccw_screen(struct screen *scr)
+{
+	unsigned int orientation = kmscon_text_get_orientation(scr->txt);
+	if (orientation == OR_NORMAL)
+		orientation = OR_LEFT;
+	else
+		orientation -= 1;
+	kmscon_text_rotate(scr->txt, orientation);
+}
+
+static void rotate_ccw_all(struct kmscon_terminal *term)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+
+	shl_dlist_for_each(iter, &term->screens) {
+		scr = shl_dlist_entry(iter, struct screen, list);
+		rotate_ccw_screen(scr);
+		term->min_cols = 0;
+		term->min_rows = 0;
+		terminal_resize(term,
+				kmscon_text_get_cols(scr->txt),
+				kmscon_text_get_rows(scr->txt),
+				true, true);
+	}
+}
+
 static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 {
 	struct shl_dlist *iter;
@@ -340,7 +405,7 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	else
 		be = "bbulk";
 
-	ret = kmscon_text_new(&scr->txt, be);
+	ret = kmscon_text_new(&scr->txt, be, term->conf->rotate);
 	if (ret) {
 		log_error("cannot create text-renderer");
 		goto err_cb;
@@ -478,6 +543,18 @@ static void input_event(struct uterm_input *input,
 		--term->font_attr.points;
 		if (font_set(term))
 			++term->font_attr.points;
+		return;
+	}
+	if (conf_grab_matches(term->conf->grab_rotate_cw,
+				ev->mods, ev->num_syms, ev->keysyms)) {
+		rotate_cw_all(term);
+		ev->handled = true;
+		return;
+	}
+	if (conf_grab_matches(term->conf->grab_rotate_ccw,
+				ev->mods, ev->num_syms, ev->keysyms)) {
+		rotate_ccw_all(term);
+		ev->handled = true;
 		return;
 	}
 
