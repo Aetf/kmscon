@@ -340,6 +340,20 @@ font-name=Ubuntu Mono
         </listitem>
       </varlistentry>
 
+      <varlistentry>
+        <term><option>grab-rotate-cw</option></term>
+        <listitem>
+          <para>Rotate output clock-wise. (default: &lt;Logo&gt;Plus)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-rotate-ccw</option></term>
+        <listitem>
+          <para>Rotate output counter-clock-wise. (default: &lt;Logo&gt;Minus)</para>
+        </listitem>
+      </varlistentry>
+
       <para><emphasis>### Video Options ###</emphasis></para>
       <varlistentry>
         <term><option>drm</option></term>
@@ -387,6 +401,13 @@ font-name=Ubuntu Mono
         <term><option>mode</option></term>
         <listitem>
           <para>Set the resolution to {width}x{height}</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>rotate</option></term>
+        <listitem>
+          <para>Orientation of output to use. (default: normal)</para>
         </listitem>
       </varlistentry>
 
