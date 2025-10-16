@@ -31,6 +31,8 @@
  */
 
 uniform mat4 projection;
+uniform float cos;
+uniform float sin;
 
 attribute vec2 position;
 attribute vec2 texture_position;
@@ -41,9 +43,15 @@ varying vec2 texpos;
 varying vec3 fgcol;
 varying vec3 bgcol;
 
+vec2 opRotate(in vec2 p)
+{
+    return p * mat2(vec2(cos, sin), vec2(-sin, cos));
+}
+
 void main()
 {
-	gl_Position = projection * vec4(position, 0.0, 1.0);
+	vec2 rotatedPosition = opRotate(position);
+	gl_Position = projection * vec4(rotatedPosition, 0.0, 1.0);
 	texpos = texture_position;
 	fgcol = fgcolor;
 	bgcol = bgcolor;
