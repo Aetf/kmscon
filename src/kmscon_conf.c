@@ -134,6 +134,10 @@ static void print_help()
 		"\t                                  Close current session\n"
 		"\t    --grab-terminal-new <grab>  [<Ctrl><Logo>Return]\n"
 		"\t                                  Create a new terminal session\n"
+		"\t    --grab-rotate-cw <grab>     [<Logo>Plus]\n"
+		"\t                                  Rotate output clock-wise\n"
+		"\t    --grab-rotate-ccw <grab>    [<Logo>Minus]\n"
+		"\t                                  Rotate output counter-clock-wise\n"
 		"\n"
 		"Video Options:\n"
 		"\t    --drm                     [on]    Use DRM if available\n"
@@ -149,6 +153,7 @@ static void print_help()
 		"\t                                     error, a default mode will be used.\n"
 		"\t                                     This option is incompatible with\n"
 		"\t                                     --use-original-mode.\n"
+		"\t    --rotate <orientation>  [normal] normal, right, upside-down, left\n"
 		"\n"
 		"Font Options:\n"
 		"\t    --font-engine <engine>  [pango]\n"
@@ -646,6 +651,12 @@ static struct conf_grab def_grab_session_close =
 static struct conf_grab def_grab_terminal_new =
 		CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Return);
 
+static struct conf_grab def_grab_rotate_cw =
+		CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_plus);
+
+static struct conf_grab def_grab_rotate_ccw =
+		CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_minus);
+
 static palette_t def_palette = {
 	[TSM_COLOR_BLACK]         = {   0,   0,   0 }, /* black */
 	[TSM_COLOR_RED]           = { 205,   0,   0 }, /* red */
@@ -729,6 +740,8 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_GRAB(0, "grab-session-dummy", &conf->grab_session_dummy, &def_grab_session_dummy),
 		CONF_OPTION_GRAB(0, "grab-session-close", &conf->grab_session_close, &def_grab_session_close),
 		CONF_OPTION_GRAB(0, "grab-terminal-new", &conf->grab_terminal_new, &def_grab_terminal_new),
+		CONF_OPTION_GRAB(0, "grab-rotate-cw", &conf->grab_rotate_cw, &def_grab_rotate_cw),
+		CONF_OPTION_GRAB(0, "grab-rotate-ccw", &conf->grab_rotate_ccw, &def_grab_rotate_ccw),
 
 		/* Video Options */
 		CONF_OPTION_BOOL_FULL(0, "drm", aftercheck_drm, NULL, NULL, &conf->drm, true),
@@ -737,6 +750,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_STRING(0, "render-engine", &conf->render_engine, NULL),
 		CONF_OPTION_BOOL(0, "use-original-mode", &conf->use_original_mode, true),
 		CONF_OPTION_STRING(0, "mode", &conf->mode, NULL),
+		CONF_OPTION_STRING(0, "rotate", &conf->rotate, "normal"),
 
 		/* Font Options */
 		CONF_OPTION_STRING(0, "font-engine", &conf->font_engine, "pango"),
