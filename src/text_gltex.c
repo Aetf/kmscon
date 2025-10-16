@@ -105,6 +105,8 @@ struct gltex {
 	GLfloat advance_y;
 
 	struct gl_shader *shader;
+	GLuint uni_cos;
+	GLuint uni_sin;
 	GLuint uni_proj;
 	GLuint uni_atlas;
 	GLuint uni_advance_htex;
@@ -112,6 +114,9 @@ struct gltex {
 
 	unsigned int sw;
 	unsigned int sh;
+
+	GLfloat cos;
+	GLfloat sin;
 };
 
 static int gltex_init(struct kmscon_text *txt)
@@ -183,6 +188,8 @@ static int gltex_set(struct kmscon_text *txt)
 	if (ret)
 		goto err_bold_htable;
 
+	gt->uni_cos = gl_shader_get_uniform(gt->shader, "cos");
+	gt->uni_sin = gl_shader_get_uniform(gt->shader, "sin");
 	gt->uni_proj = gl_shader_get_uniform(gt->shader, "projection");
 	gt->uni_atlas = gl_shader_get_uniform(gt->shader, "atlas");
 	gt->uni_advance_htex = gl_shader_get_uniform(gt->shader,
@@ -199,8 +206,13 @@ static int gltex_set(struct kmscon_text *txt)
 	gt->sw = uterm_mode_get_width(mode);
 	gt->sh = uterm_mode_get_height(mode);
 
-	txt->cols = gt->sw / FONT_WIDTH(txt);
-	txt->rows = gt->sh / FONT_HEIGHT(txt);
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		txt->cols = gt->sw / FONT_WIDTH(txt);
+		txt->rows = gt->sh / FONT_HEIGHT(txt);
+	} else {
+		txt->cols = gt->sh / FONT_WIDTH(txt);
+		txt->rows = gt->sw / FONT_HEIGHT(txt);
+	}
 
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &s);
 	if (s <= 0)
@@ -520,6 +532,37 @@ err_free:
 	return ret;
 }
 
+static void gltex_set_rotate(struct gltex *gt, enum Orientation orientation)
+{
+	float sin_table[5] = {0.0, 1.0, 0.0, -1.0, 0.0};
+
+	gt->cos = sin_table[orientation + 1];
+	gt->sin = sin_table[orientation];
+}
+
+static int gltex_rotate(struct kmscon_text *txt, enum Orientation orientation)
+{
+	struct gltex *gt = txt->data;
+
+	txt->orientation = orientation;
+
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		txt->cols = gt->sw / FONT_WIDTH(txt);
+		txt->rows = gt->sh / FONT_HEIGHT(txt);
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
+	} else {
+		float aspect = (float) gt->sw / (float) gt->sh;
+		txt->cols = gt->sh / FONT_WIDTH(txt);
+		txt->rows = gt->sw / FONT_HEIGHT(txt);
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt) * aspect;
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt) * (1./aspect);
+	}
+	gltex_unset(txt);
+	gltex_set(txt);
+	return 0;
+}
+
 static int gltex_prepare(struct kmscon_text *txt)
 {
 	struct gltex *gt = txt->data;
@@ -537,8 +580,15 @@ static int gltex_prepare(struct kmscon_text *txt)
 		atlas->cache_num = 0;
 	}
 
-	gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
-	gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
+	} else {
+		float aspect = (float) gt->sw / (float) gt->sh;
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt) * aspect;
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt) * (1./aspect);
+	}
+	gltex_set_rotate(gt, txt->orientation);
 
 	return 0;
 }
@@ -648,6 +698,8 @@ static int gltex_render(struct kmscon_text *txt)
 
 	gl_m4_identity(mat);
 	glUniformMatrix4fv(gt->uni_proj, 1, GL_FALSE, mat);
+	glUniform1f(gt->uni_cos, gt->cos);
+	glUniform1f(gt->uni_sin, gt->sin);
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
@@ -693,6 +745,7 @@ struct kmscon_text_ops kmscon_text_gltex_ops = {
 	.destroy = gltex_destroy,
 	.set = gltex_set,
 	.unset = gltex_unset,
+	.rotate = gltex_rotate,
 	.prepare = gltex_prepare,
 	.draw = gltex_draw,
 	.render = gltex_render,
