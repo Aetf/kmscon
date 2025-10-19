@@ -198,9 +198,10 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 
 	line = pango_layout_get_line_readonly(layout, 0);
 
-	pango_layout_line_get_pixel_extents(line, &logical_rec, &rec);
+	pango_layout_line_get_extents(line, &logical_rec, &rec);
+	pango_extents_to_pixels(&rec, &logical_rec);
 
-	glyph->width = (logical_rec.width > face->real_attr.width) ? 2 : cwidth;
+	glyph->width = (logical_rec.x + logical_rec.width > rec.x + face->real_attr.width) ? 2 : cwidth;
 	glyph->buf.width = face->real_attr.width * glyph->width;
 	glyph->buf.height = face->real_attr.height;
 	glyph->buf.stride = align_up4(glyph->buf.width);
