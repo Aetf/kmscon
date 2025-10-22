@@ -60,8 +60,6 @@
 
 #define LOG_SUBSYSTEM "font_pango"
 
-#define align_up4(x) (((x) + 3) & ~0x3)
-
 struct face {
 	unsigned long ref;
 	struct shl_dlist list;
@@ -204,7 +202,7 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 	glyph->width = (logical_rec.x + logical_rec.width > rec.x + face->real_attr.width) ? 2 : cwidth;
 	glyph->buf.width = face->real_attr.width * glyph->width;
 	glyph->buf.height = face->real_attr.height;
-	glyph->buf.stride = align_up4(glyph->buf.width);
+	glyph->buf.stride = glyph->buf.width;
 	glyph->buf.format = UTERM_FORMAT_GREY;
 
 	if (!glyph->buf.width || !glyph->buf.height) {
