@@ -32,6 +32,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include "font.h"
+#include "font_rotate.h"
 #include "shl_hashtable.h"
 #include "shl_log.h"
 #include "text.h"
@@ -40,9 +42,8 @@
 #define LOG_SUBSYSTEM "text_pixman"
 
 struct tp_glyph {
-	const struct kmscon_glyph *glyph;
+	struct uterm_video_buffer vb;
 	pixman_image_t *surf;
-	uint8_t *data;
 };
 
 struct tp_pixman {
@@ -54,7 +55,6 @@ struct tp_pixman {
 	pixman_image_t *surf[2];
 	unsigned int format[2];
 
-	bool new_stride;
 	bool use_indirect;
 	uint8_t *data[2];
 	struct uterm_video_buffer vbuf;
@@ -90,7 +90,7 @@ static void free_glyph(void *data)
 	struct tp_glyph *glyph = data;
 
 	pixman_image_unref(glyph->surf);
-	free(glyph->data);
+	free(glyph->vb.data);
 	free(glyph);
 }
 
@@ -181,16 +181,9 @@ static int tp_set(struct kmscon_text *txt)
 		log_error("cannot create pixman solid color buffer");
 		return -ENOMEM;
 	}
-
-	ret = shl_hashtable_new(&tp->glyphs, shl_direct_hash,
-				shl_direct_equal, free_glyph);
+	ret = kmscon_rotate_create_tables(&tp->glyphs, &tp->bold_glyphs, free_glyph);
 	if (ret)
 		goto err_white;
-
-	ret = shl_hashtable_new(&tp->bold_glyphs, shl_direct_hash,
-				shl_direct_equal, free_glyph);
-	if (ret)
-		goto err_htable;
 
 	/*
 	 * TODO: It is actually faster to use a local shadow buffer and then
@@ -205,7 +198,7 @@ static int tp_set(struct kmscon_text *txt)
 			    txt->disp);
 		ret = alloc_indirect(txt, w, h);
 		if (ret)
-			goto err_htable_bold;
+			goto err_glyph_table;
 	} else {
 		tp->format[0] = format_u2p(tp->buf[0].format);
 		tp->surf[0] = pixman_image_create_bits_no_clear(tp->format[0],
@@ -222,9 +215,13 @@ static int tp_set(struct kmscon_text *txt)
 			goto err_ctx;
 		}
 	}
-
-	txt->cols = w / FONT_WIDTH(txt);
-	txt->rows = h / FONT_HEIGHT(txt);
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		txt->cols = w / txt->font->attr.width;
+		txt->rows = h / txt->font->attr.height;
+	} else {
+		txt->cols = h / txt->font->attr.width;
+		txt->rows = w / txt->font->attr.height;
+	}
 
 	return 0;
 
@@ -235,10 +232,8 @@ err_ctx:
 		pixman_image_unref(tp->surf[0]);
 	free(tp->data[1]);
 	free(tp->data[0]);
-err_htable_bold:
-	shl_hashtable_free(tp->bold_glyphs);
-err_htable:
-	shl_hashtable_free(tp->glyphs);
+err_glyph_table:
+	kmscon_rotate_free_tables(tp->glyphs, tp->bold_glyphs);
 err_white:
 	pixman_image_unref(tp->white);
 	return ret;
@@ -252,8 +247,7 @@ static void tp_unset(struct kmscon_text *txt)
 	pixman_image_unref(tp->surf[0]);
 	free(tp->data[1]);
 	free(tp->data[0]);
-	shl_hashtable_free(tp->bold_glyphs);
-	shl_hashtable_free(tp->glyphs);
+	kmscon_rotate_free_tables(tp->glyphs, tp->bold_glyphs);
 	pixman_image_unref(tp->white);
 }
 
@@ -261,13 +255,11 @@ static int find_glyph(struct kmscon_text *txt, struct tp_glyph **out,
 		      uint64_t id, const uint32_t *ch, size_t len, const struct tsm_screen_attr *attr)
 {
 	struct tp_pixman *tp = txt->data;
-	struct tp_glyph *glyph;
+	const struct kmscon_glyph *glyph;
+	struct tp_glyph *tp_glyph;
 	struct shl_hashtable *gtable;
 	struct kmscon_font *font;
-	const struct uterm_video_buffer *buf;
-	uint8_t *dst, *src;
-	unsigned int format, i;
-	int ret, stride;
+	int ret;
 	bool res;
 
 	if (attr->bold) {
@@ -288,86 +280,87 @@ static int find_glyph(struct kmscon_text *txt, struct tp_glyph **out,
 	else
 		font->attr.italic = false;
 
-	res = shl_hashtable_find(gtable, (void**)&glyph, id);
+	res = shl_hashtable_find(gtable, (void**)&tp_glyph, id);
 	if (res) {
-		*out = glyph;
+		*out = tp_glyph;
 		return 0;
 	}
 
-	glyph = malloc(sizeof(*glyph));
-	if (!glyph)
+	tp_glyph = malloc(sizeof(*tp_glyph));
+	if (!tp_glyph)
 		return -ENOMEM;
-	memset(glyph, 0, sizeof(*glyph));
+	memset(tp_glyph, 0, sizeof(*tp_glyph));
 
 	if (!len)
-		ret = kmscon_font_render_empty(font, &glyph->glyph);
+		ret = kmscon_font_render_empty(font, &glyph);
 	else
-		ret = kmscon_font_render(font, id, ch, len, &glyph->glyph);
+		ret = kmscon_font_render(font, id, ch, len, &glyph);
 
 	if (ret) {
-		ret = kmscon_font_render_inval(font, &glyph->glyph);
+		ret = kmscon_font_render_inval(font, &glyph);
 		if (ret)
 			goto err_free;
 	}
 
-	buf = &glyph->glyph->buf;
-	stride = buf->stride;
-	format = format_u2p(buf->format);
-	glyph->surf = pixman_image_create_bits_no_clear(format,
-							buf->width,
-							buf->height,
-							(void*)buf->data,
-							buf->stride);
-	if (!glyph->surf) {
-		stride = (buf->stride + 3) & ~0x3;
-		if (!tp->new_stride) {
-			tp->new_stride = true;
-			log_debug("wrong stride, copy buffer (%d => %d)",
-			  buf->stride, stride);
-		}
-
-		glyph->data = malloc(stride * buf->height);
-		if (!glyph->data) {
-			log_error("cannot allocate memory for glyph storage");
-			ret = -ENOMEM;
-			goto err_free;
-		}
-
-		src = buf->data;
-		dst = glyph->data;
-		for (i = 0; i < buf->height; ++i) {
-			memcpy(dst, src, buf->width);
-			dst += stride;
-			src += buf->stride;
-		}
-
-		glyph->surf = pixman_image_create_bits_no_clear(format,
-								buf->width,
-								buf->height,
-								(void*)
-								glyph->data,
-								stride);
-	}
-	if (!glyph->surf) {
-		log_error("cannot create pixman-glyph: %d %p %d %d %d %d",
-			  ret, glyph->data ? glyph->data : buf->data, format,
-			  buf->width, buf->height, stride);
-		ret = -EFAULT;
+	ret = kmscon_rotate_glyph(&tp_glyph->vb, glyph, txt->orientation, 4);
+	if (ret)
 		goto err_free;
+
+
+	tp_glyph->surf = pixman_image_create_bits_no_clear(PIXMAN_a8,
+							   tp_glyph->vb.width,
+							   tp_glyph->vb.height,
+							   (void*) tp_glyph->vb.data,
+							   tp_glyph->vb.stride);
+
+	if (!tp_glyph->surf) {
+		log_error("cannot create pixman-glyph: %d %p %d %d %d",
+			  ret, tp_glyph->vb.data, tp_glyph->vb.width, tp_glyph->vb.height, tp_glyph->vb.stride);
+		ret = -EFAULT;
+		goto err_free_vb;
 	}
 
-	ret = shl_hashtable_insert(gtable, id, glyph);
+	ret = shl_hashtable_insert(gtable, id, tp_glyph);
 	if (ret)
 		goto err_pixman;
 
-	*out = glyph;
+	*out = tp_glyph;
 	return 0;
 
 err_pixman:
-	pixman_image_unref(glyph->surf);
+	pixman_image_unref(tp_glyph->surf);
+
+err_free_vb:
+	free(tp_glyph->vb.data);
 err_free:
-	free(glyph);
+	free(tp_glyph);
 	return ret;
+}
+
+static int tp_rotate(struct kmscon_text *txt, enum Orientation orientation)
+{
+	struct tp_pixman *tp = txt->data;
+	unsigned int w, h;
+	struct uterm_mode *m;
+
+	m = uterm_display_get_current(txt->disp);
+	w = uterm_mode_get_width(m);
+	h = uterm_mode_get_height(m);
+
+	txt->orientation = orientation;
+
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		txt->cols = w / txt->font->attr.width;
+		txt->rows = h / txt->font->attr.height;
+	} else {
+		txt->cols = h / txt->font->attr.width;
+		txt->rows = w / txt->font->attr.height;
+	}
+
+	// Free glyph cache, as the glyph are rotated in the cache.
+	kmscon_rotate_free_tables(tp->glyphs, tp->bold_glyphs);
+
+	return kmscon_rotate_create_tables(&tp->glyphs, &tp->bold_glyphs, free_glyph);
 }
 
 static int tp_prepare(struct kmscon_text *txt)
@@ -398,14 +391,22 @@ static int tp_draw(struct kmscon_text *txt,
 		   const struct tsm_screen_attr *attr)
 {
 	struct tp_pixman *tp = txt->data;
+	struct uterm_mode *mode;
 	struct tp_glyph *glyph;
 	int ret;
+	unsigned int x, y, w, h, sw, sh, cwidth;
 	uint32_t bc;
 	pixman_color_t fc;
 	pixman_image_t *col;
 
 	if (!width)
 		return 0;
+
+	mode = uterm_display_get_current(txt->disp);
+	if (!mode)
+		return -EINVAL;
+	sw = uterm_mode_get_width(mode);
+	sh = uterm_mode_get_height(mode);
 
 	ret = find_glyph(txt, &glyph, id, ch, len, attr);
 	if (ret)
@@ -441,33 +442,48 @@ static int tp_draw(struct kmscon_text *txt,
 		}
 	}
 
+	w = glyph->vb.width;
+	h = glyph->vb.height;
+
+	switch (txt->orientation) {
+	default:
+	case OR_NORMAL:
+		x = posx * FONT_WIDTH(txt);
+		y = posy * FONT_HEIGHT(txt);
+		break;
+	case OR_UPSIDE_DOWN:
+		cwidth = w / FONT_WIDTH(txt);
+		x = sw - (posx + cwidth) * FONT_WIDTH(txt);
+		y = sh - (posy + 1) * FONT_HEIGHT(txt);
+		break;
+	case OR_RIGHT:
+		x = sw - (posy + 1) * FONT_HEIGHT(txt);
+		y = posx * FONT_WIDTH(txt);
+		break;
+	case OR_LEFT:
+		cwidth = h / FONT_WIDTH(txt);
+		x = posy * FONT_HEIGHT(txt);
+		y = sh - (posx + cwidth) * FONT_WIDTH(txt);
+		break;
+	}
+
 	if (!bc) {
 		pixman_image_composite(PIXMAN_OP_SRC,
 				       col,
 				       glyph->surf,
 				       tp->surf[tp->cur],
 				       0, 0, 0, 0,
-				       posx * txt->font->attr.width,
-				       posy * txt->font->attr.height,
-				       glyph->glyph->buf.width,
-				       txt->font->attr.height);
+				       x, y, w, h);
 	} else {
 		pixman_fill(tp->c_data, tp->c_stride / 4, tp->c_bpp,
-			    posx * txt->font->attr.width,
-			    posy * txt->font->attr.height,
-			    glyph->glyph->buf.width,
-			    txt->font->attr.height,
-			    bc);
+			    x, y, w, h, bc);
 
 		pixman_image_composite(PIXMAN_OP_OVER,
 				       col,
 				       glyph->surf,
 				       tp->surf[tp->cur],
 				       0, 0, 0, 0,
-				       posx * txt->font->attr.width,
-				       posy * txt->font->attr.height,
-				       glyph->glyph->buf.width,
-				       txt->font->attr.height);
+				       x, y, w, h);
 	}
 
 	pixman_image_unref(col);
@@ -500,6 +516,7 @@ struct kmscon_text_ops kmscon_text_pixman_ops = {
 	.destroy = tp_destroy,
 	.set = tp_set,
 	.unset = tp_unset,
+	.rotate = tp_rotate,
 	.prepare = tp_prepare,
 	.draw = tp_draw,
 	.render = tp_render,
