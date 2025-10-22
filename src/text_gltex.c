@@ -119,9 +119,6 @@ struct gltex {
 	GLfloat sin;
 };
 
-#define FONT_WIDTH(txt) ((txt)->font->attr.width)
-#define FONT_HEIGHT(txt) ((txt)->font->attr.height)
-
 static int gltex_init(struct kmscon_text *txt)
 {
 	struct gltex *gt;

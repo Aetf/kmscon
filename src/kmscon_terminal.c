@@ -101,11 +101,11 @@ static void do_clear_margins(struct screen *scr)
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
 
 	if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_UPSIDE_DOWN) {
-		w = scr->txt->font->attr.width * scr->txt->cols;
-		h = scr->txt->font->attr.height * scr->txt->rows;
+		w = FONT_WIDTH(scr->txt) * scr->txt->cols;
+		h = FONT_HEIGHT(scr->txt) * scr->txt->rows;
 	} else {
-		w = scr->txt->font->attr.height * scr->txt->rows;
-		h = scr->txt->font->attr.width * scr->txt->cols;
+		w = FONT_HEIGHT(scr->txt) * scr->txt->rows;
+		h = FONT_WIDTH(scr->txt) * scr->txt->cols;
 	}
 	dw = sw - w;
 	dh = sh - h;
