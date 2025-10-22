@@ -223,8 +223,8 @@ static int tp_set(struct kmscon_text *txt)
 		}
 	}
 
-	txt->cols = w / txt->font->attr.width;
-	txt->rows = h / txt->font->attr.height;
+	txt->cols = w / FONT_WIDTH(txt);
+	txt->rows = h / FONT_HEIGHT(txt);
 
 	return 0;
 
