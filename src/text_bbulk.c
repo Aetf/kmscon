@@ -46,9 +46,6 @@ struct bbulk {
 	struct uterm_video_blend_req *reqs;
 };
 
-#define FONT_WIDTH(txt) ((txt)->font->attr.width)
-#define FONT_HEIGHT(txt) ((txt)->font->attr.height)
-
 static int bbulk_init(struct kmscon_text *txt)
 {
 	struct bbulk *bb;

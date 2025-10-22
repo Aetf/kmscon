@@ -86,6 +86,9 @@ struct kmscon_text_ops {
 	void (*abort) (struct kmscon_text *txt);
 };
 
+#define FONT_WIDTH(txt) ((txt)->font->attr.width)
+#define FONT_HEIGHT(txt) ((txt)->font->attr.height)
+
 int kmscon_text_register(const struct kmscon_text_ops *ops);
 void kmscon_text_unregister(const char *name);
 

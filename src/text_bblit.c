@@ -44,19 +44,17 @@
 
 static int bblit_set(struct kmscon_text *txt)
 {
-	unsigned int sw, sh, fw, fh;
+	unsigned int sw, sh;
 	struct uterm_mode *mode;
 
-	fw = txt->font->attr.width;
-	fh = txt->font->attr.height;
 	mode = uterm_display_get_current(txt->disp);
 	if (!mode)
 		return -EINVAL;
 	sw = uterm_mode_get_width(mode);
 	sh = uterm_mode_get_height(mode);
 
-	txt->cols = sw / fw;
-	txt->rows = sh / fh;
+	txt->cols = sw / FONT_WIDTH(txt);
+	txt->rows = sh / FONT_HEIGHT(txt);
 
 	return 0;
 }
