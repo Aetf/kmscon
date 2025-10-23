@@ -439,6 +439,22 @@
                 (default: &lt;Ctrl&gt;&lt;Logo&gt;Return)</para>
         </listitem>
       </varlistentry>
+
+      <varlistentry>
+        <term><option>--grab-rotate-cw {grab}</option></term>
+        <listitem>
+          <para>Rotate output clock-wise: Normal -> Right -> Inverted -> Left and so on.
+                (default: &lt;Logo&gt;Plus)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--grab-rotate-ccw {grab}</option></term>
+        <listitem>
+          <para>Rotate output counter-clock-wise: Normal -> Left -> Inverted -> Right and so on.
+                (default: &lt;Logo&gt;Minus)</para>
+        </listitem>
+      </varlistentry>
     </variablelist>
 
     <para>Video Options:</para>
@@ -524,6 +540,18 @@
           mode effectively. For example, the `video={width}x{height}` kernel parameter may
           be required in order to ensure that there is enough memory to store the
           framebuffers for a large resolution.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--rotate {orientation}</option></term>
+        <listitem>
+          <para>Select the desired orientation of the output. Available orientations
+                are 'normal' meaning output is not rotated, 'right' meaning output is
+                rotated 90° clock-wise, 'upside-down' meaning output is rotated 180°
+                clock-wise and 'left' meaning output is rotated 90° counter clock-wise.
+                This has only effect for the 'gltex' render-engine. (default: 'normal')
+          </para>
         </listitem>
       </varlistentry>
     </variablelist>

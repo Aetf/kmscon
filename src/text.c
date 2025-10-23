@@ -35,7 +35,6 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include "shl_dlist.h"
 #include "shl_log.h"
 #include "shl_misc.h"
 #include "shl_register.h"
@@ -103,7 +102,7 @@ void kmscon_text_unregister(const char *name)
 	shl_register_remove(&text_reg, name);
 }
 
-static int new_text(struct kmscon_text *text, const char *backend)
+static int new_text(struct kmscon_text *text, const char *backend, enum Orientation orientation)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";
@@ -124,6 +123,7 @@ static int new_text(struct kmscon_text *text, const char *backend)
 
 	text->record = record;
 	text->ops = record->data;
+	text->orientation = orientation;
 
 	if (text->ops->init)
 		ret = text->ops->init(text);
@@ -143,10 +143,11 @@ static int new_text(struct kmscon_text *text, const char *backend)
  * kmscon_text_new:
  * @out: A pointer to the new text-renderer is stored here
  * @backend: Backend to use or NULL for default backend
+ * @rotate: Orientation ("normal", "upside-down", "right" or "left") to use for output
  *
  * Returns: 0 on success, error code on failure
  */
-int kmscon_text_new(struct kmscon_text **out, const char *backend)
+int kmscon_text_new(struct kmscon_text **out, const char *backend, const char *rotate)
 {
 	struct kmscon_text *text;
 	int ret;
@@ -160,10 +161,31 @@ int kmscon_text_new(struct kmscon_text **out, const char *backend)
 		return -ENOMEM;
 	}
 
-	ret = new_text(text, backend);
+	text->orientation = OR_NORMAL;
+
+	if (rotate) {
+		if (strncmp(rotate, "normal", 6) == 0) {
+			text->orientation = OR_NORMAL;
+			log_debug("using: orientation: normal");
+		}
+		else if (strncmp(rotate, "right", 5) == 0) {
+			text->orientation = OR_RIGHT;
+			log_debug("using: orientation: right");
+		}
+		else if (strncmp(rotate, "upside-down", 8) == 0) {
+			text->orientation = OR_UPSIDE_DOWN;
+			log_debug("using: orientation: upside-down");
+		}
+		else if (strncmp(rotate, "left", 4) == 0) {
+			text->orientation = OR_LEFT;
+			log_debug("using: orientation: left");
+		}
+	}
+
+	ret = new_text(text, backend, text->orientation);
 	if (ret) {
 		if (backend)
-			ret = new_text(text, NULL);
+			ret = new_text(text, NULL, text->orientation);
 		if (ret)
 			goto err_free;
 	}
@@ -331,6 +353,49 @@ unsigned int kmscon_text_get_rows(struct kmscon_text *txt)
 		return 0;
 
 	return txt->rows;
+}
+
+/**
+ * kmscon_text_get_orientation:
+ * @txt: valid text renderer
+ *
+ * With a valid @txt passed it, this returns the currently active orientation
+ * of the output/screen. Possible values are:
+ *
+ *   - OR_NORMAL
+ *   - OR_RIGHT
+ *   - OR_UPSIDE_DOWN
+ *   - OR_LEFT
+ *
+ * Returns: Current orientation enum or OR_NORMAL if @txt is invalid
+ */
+enum Orientation kmscon_text_get_orientation(struct kmscon_text *txt)
+{
+	if (!txt)
+		return OR_NORMAL;
+
+	return txt->orientation;
+}
+
+/**
+ * kmscon_text_rotate:
+ * @txt: valid text renderer
+ * @orientation: enum value representing the desired output-orientation
+ *
+ * Update the rotation/orientation of the text. It can be one of:
+ *
+ *   - OR_NORMAL
+ *   - OR_RIGHT
+ *   - OR_UPSIDE_DOWN
+ *   - OR_LEFT
+ *
+ * Returns: 0 on success, negative error code on failure.
+ */
+int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation)
+{
+	if (txt->ops->rotate)
+		return txt->ops->rotate(txt, orientation);
+	return 0;
 }
 
 /**

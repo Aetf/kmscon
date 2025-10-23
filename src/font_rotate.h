@@ -1,8 +1,7 @@
 /*
- * kmscon - Vertex Shader
+ * kmscon - rotate font
  *
- * Copyright (c) 2011-2012 David Herrmann <dh.herrmann@googlemail.com>
- * Copyright (c) 2011 University of Tuebingen
+ * Copyright (c) 2025 Jocelyn Falempe <jfalempe@redhat.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -24,35 +23,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
- * Vertex Shader
- * This shader is a very basic vertex shader which forwards all data and
- * performs basic matrix multiplications.
- */
+#include "shl_hashtable.h"
+#include "text.h"
 
-uniform mat4 projection;
-uniform float cos;
-uniform float sin;
-
-attribute vec2 position;
-attribute vec2 texture_position;
-attribute vec3 fgcolor;
-attribute vec3 bgcolor;
-
-varying vec2 texpos;
-varying vec3 fgcol;
-varying vec3 bgcol;
-
-vec2 opRotate(in vec2 p)
-{
-    return p * mat2(vec2(cos, sin), vec2(-sin, cos));
-}
-
-void main()
-{
-	vec2 rotatedPosition = opRotate(position);
-	gl_Position = projection * vec4(rotatedPosition, 0.0, 1.0);
-	texpos = texture_position;
-	fgcol = fgcolor;
-	bgcol = bgcolor;
-}
+int kmscon_rotate_create_tables(struct shl_hashtable **normal, struct shl_hashtable **bold, shl_free_cb free_glyph);
+void kmscon_rotate_free_tables(struct shl_hashtable *normal, struct shl_hashtable *bold);
+int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph *glyph, enum Orientation orientation, uint8_t align);
