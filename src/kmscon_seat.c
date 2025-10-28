@@ -577,7 +577,7 @@ static int seat_vt_event(struct uterm_vt *vt, struct uterm_vt_event *ev,
 }
 
 static void seat_input_event(struct uterm_input *input,
-			     struct uterm_input_event *ev,
+			     struct uterm_input_key_event *ev,
 			     void *data)
 {
 	struct kmscon_seat *seat = data;
@@ -766,7 +766,7 @@ int kmscon_seat_new(struct kmscon_seat **out,
 	if (ret)
 		goto err_conf;
 
-	ret = uterm_input_register_cb(seat->input, seat_input_event, seat);
+	ret = uterm_input_register_key_cb(seat->input, seat_input_event, seat);
 	if (ret)
 		goto err_input;
 
@@ -788,7 +788,7 @@ int kmscon_seat_new(struct kmscon_seat **out,
 	return 0;
 
 err_input_cb:
-	uterm_input_unregister_cb(seat->input, seat_input_event, seat);
+	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
 err_input:
 	uterm_input_unref(seat->input);
 err_conf:
@@ -834,7 +834,7 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 	}
 
 	uterm_vt_deallocate(seat->vt);
-	uterm_input_unregister_cb(seat->input, seat_input_event, seat);
+	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
 	uterm_input_unref(seat->input);
 	kmscon_conf_free(seat->conf_ctx);
 	free(seat->name);
