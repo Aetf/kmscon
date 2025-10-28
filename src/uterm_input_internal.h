@@ -74,7 +74,7 @@ struct uterm_input {
 	unsigned int repeat_rate;
 	unsigned int repeat_delay;
 
-	struct shl_hook *hook;
+	struct shl_hook *key_hook;
 	struct xkb_context *ctx;
 	struct xkb_keymap *keymap;
 	struct xkb_compose_table *compose_table;
