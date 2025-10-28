@@ -103,6 +103,7 @@ uterm_srcs = [
   'uterm_vt.c',
   'uterm_input.c',
   'uterm_input_uxkb.c',
+  'uterm_input_pointer.c',
   embed_gen.process('uterm_input_fallback.xkb', extra_args: keymap_regex),
 ]
 uterm_dep = [
