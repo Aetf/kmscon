@@ -141,6 +141,48 @@ static void input_sleep_dev(struct uterm_input_dev *dev)
 	dev->rfd = -1;
 }
 
+static int input_init_keyboard(struct uterm_input_dev *dev)
+{
+	dev->num_syms = 1;
+	dev->event.keysyms = malloc(sizeof(uint32_t) * dev->num_syms);
+	if (!dev->event.keysyms)
+		return -1;
+	dev->event.codepoints = malloc(sizeof(uint32_t) * dev->num_syms);
+	if (!dev->event.codepoints)
+		goto err_syms;
+	dev->repeat_event.keysyms = malloc(sizeof(uint32_t) * dev->num_syms);
+	if (!dev->repeat_event.keysyms)
+		goto err_codepoints;
+	dev->repeat_event.codepoints = malloc(sizeof(uint32_t) * dev->num_syms);
+	if (!dev->repeat_event.codepoints)
+		goto err_rsyms;
+
+	if (uxkb_dev_init(dev))
+		goto err_rcodepoints;
+
+	return 0;
+
+err_rcodepoints:
+	free(dev->repeat_event.codepoints);
+err_rsyms:
+	free(dev->repeat_event.keysyms);
+err_codepoints:
+	free(dev->event.codepoints);
+err_syms:
+	free(dev->event.keysyms);
+	return -1;
+}
+
+static void input_exit_keyboard(struct uterm_input_dev *dev)
+{
+	uxkb_dev_destroy(dev);
+	free(dev->repeat_event.codepoints);
+	free(dev->repeat_event.keysyms);
+	free(dev->event.codepoints);
+	free(dev->event.keysyms);
+}
+
+
 static void input_new_dev(struct uterm_input *input,
 				const char *node,
 				unsigned int capabilities)
@@ -160,23 +202,11 @@ static void input_new_dev(struct uterm_input *input,
 	if (!dev->node)
 		goto err_free;
 
-	dev->num_syms = 1;
-	dev->event.keysyms = malloc(sizeof(uint32_t) * dev->num_syms);
-	if (!dev->event.keysyms)
-		goto err_node;
-	dev->event.codepoints = malloc(sizeof(uint32_t) * dev->num_syms);
-	if (!dev->event.codepoints)
-		goto err_syms;
-	dev->repeat_event.keysyms = malloc(sizeof(uint32_t) * dev->num_syms);
-	if (!dev->repeat_event.keysyms)
-		goto err_codepoints;
-	dev->repeat_event.codepoints = malloc(sizeof(uint32_t) * dev->num_syms);
-	if (!dev->repeat_event.codepoints)
-		goto err_rsyms;
-
-	ret = uxkb_dev_init(dev);
-	if (ret)
-		goto err_rcodepoints;
+	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS) {
+		ret = input_init_keyboard(dev);
+		if (ret)
+			goto err_node;
+	}
 
 	if (input->awake > 0) {
 		ret = input_wake_up_dev(dev);
@@ -189,15 +219,8 @@ static void input_new_dev(struct uterm_input *input,
 	return;
 
 err_kbd:
-	uxkb_dev_destroy(dev);
-err_rcodepoints:
-	free(dev->repeat_event.codepoints);
-err_rsyms:
-	free(dev->repeat_event.keysyms);
-err_codepoints:
-	free(dev->event.codepoints);
-err_syms:
-	free(dev->event.keysyms);
+	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
+		input_exit_keyboard(dev);
 err_node:
 	free(dev->node);
 err_free:
@@ -209,11 +232,8 @@ static void input_free_dev(struct uterm_input_dev *dev)
 	llog_debug(dev->input, "free device %s", dev->node);
 	input_sleep_dev(dev);
 	shl_dlist_unlink(&dev->list);
-	uxkb_dev_destroy(dev);
-	free(dev->repeat_event.codepoints);
-	free(dev->repeat_event.keysyms);
-	free(dev->event.codepoints);
-	free(dev->event.keysyms);
+	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
+		input_exit_keyboard(dev);
 	free(dev->node);
 	free(dev);
 }
