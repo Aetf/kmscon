@@ -281,7 +281,7 @@ int uterm_input_new(struct uterm_input **out,
 	input->repeat_rate = repeat_rate;
 	shl_dlist_init(&input->devices);
 
-	ret = shl_hook_new(&input->hook);
+	ret = shl_hook_new(&input->key_hook);
 	if (ret)
 		goto err_free;
 
@@ -308,7 +308,8 @@ int uterm_input_new(struct uterm_input **out,
 	return 0;
 
 err_hook:
-	shl_hook_free(input->hook);
+	shl_hook_free(input->key_hook);
+
 err_free:
 	free(input);
 	return ret;
@@ -341,7 +342,7 @@ void uterm_input_unref(struct uterm_input *input)
 	}
 
 	uxkb_desc_destroy(input);
-	shl_hook_free(input->hook);
+	shl_hook_free(input->key_hook);
 	ev_eloop_unref(input->eloop);
 	free(input);
 }
@@ -445,7 +446,7 @@ int uterm_input_register_cb(struct uterm_input *input,
 	if (!input || !cb)
 		return -EINVAL;
 
-	return shl_hook_add_cast(input->hook, cb, data, false);
+	return shl_hook_add_cast(input->key_hook, cb, data, false);
 }
 
 SHL_EXPORT
@@ -456,7 +457,7 @@ void uterm_input_unregister_cb(struct uterm_input *input,
 	if (!input || !cb)
 		return;
 
-	shl_hook_rm_cast(input->hook, cb, data);
+	shl_hook_rm_cast(input->key_hook, cb, data);
 }
 
 SHL_EXPORT

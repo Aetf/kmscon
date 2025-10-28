@@ -209,7 +209,7 @@ static void timer_event(struct ev_timer *timer, uint64_t num, void *data)
 	struct uterm_input_dev *dev = data;
 
 	dev->repeat_event.handled = false;
-	shl_hook_call(dev->input->hook, dev->input, &dev->repeat_event);
+	shl_hook_call(dev->input->key_hook, dev->input, &dev->repeat_event);
 }
 
 int uxkb_dev_init(struct uterm_input_dev *dev)
@@ -532,7 +532,7 @@ int uxkb_dev_process(struct uterm_input_dev *dev,
 		return -ENOKEY;
 
 	dev->event.handled = false;
-	shl_hook_call(dev->input->hook, dev->input, &dev->event);
+	shl_hook_call(dev->input->key_hook, dev->input, &dev->event);
 
 	return 0;
 }
