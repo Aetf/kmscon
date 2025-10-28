@@ -61,7 +61,7 @@ enum uterm_input_modifier {
 /* keep in sync with TSM_VTE_INVALID */
 #define UTERM_INPUT_INVALID 0xffffffff
 
-struct uterm_input_event {
+struct uterm_input_key_event {
 	bool handled;		/* user-controlled, default is false */
 	uint16_t keycode;	/* linux keycode - KEY_* - linux/input.h */
 	uint32_t ascii;		/* ascii keysym for @keycode */
@@ -74,9 +74,9 @@ struct uterm_input_event {
 
 #define UTERM_INPUT_HAS_MODS(_ev, _mods) (((_ev)->mods & (_mods)) == (_mods))
 
-typedef void (*uterm_input_cb) (struct uterm_input *input,
-				struct uterm_input_event *ev,
-				void *data);
+typedef void (*uterm_input_key_cb) (struct uterm_input *input,
+				    struct uterm_input_key_event *ev,
+				    void *data);
 
 int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop,
 		    const char *model, const char *layout, const char *variant,
@@ -90,9 +90,9 @@ void uterm_input_unref(struct uterm_input *input);
 void uterm_input_add_dev(struct uterm_input *input, const char *node);
 void uterm_input_remove_dev(struct uterm_input *input, const char *node);
 
-int uterm_input_register_cb(struct uterm_input *input, uterm_input_cb cb,
+int uterm_input_register_key_cb(struct uterm_input *input, uterm_input_key_cb cb,
 			    void *data);
-void uterm_input_unregister_cb(struct uterm_input *input, uterm_input_cb cb,
+void uterm_input_unregister_key_cb(struct uterm_input *input, uterm_input_key_cb cb,
 			       void *data);
 
 void uterm_input_sleep(struct uterm_input *input);

@@ -338,7 +338,7 @@ static inline int uxkb_dev_resize_event(struct uterm_input_dev *dev, size_t s)
 }
 
 static int uxkb_dev_fill_event(struct uterm_input_dev *dev,
-			       struct uterm_input_event *ev,
+			       struct uterm_input_key_event *ev,
 			       xkb_keycode_t code,
 			       int num_syms,
 			       const xkb_keysym_t *syms)

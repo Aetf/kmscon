@@ -89,7 +89,7 @@ static void print_modifiers(unsigned int mods)
 }
 
 static void input_arrived(struct uterm_input *input,
-			  struct uterm_input_event *ev,
+			  struct uterm_input_key_event *ev,
 			  void *data)
 {
 	char s[32];
@@ -148,12 +148,12 @@ static void monitor_event(struct uterm_monitor *mon,
 				      0, 0, log_llog, NULL);
 		if (ret)
 			return;
-		ret = uterm_input_register_cb(input, input_arrived, NULL);
+		ret = uterm_input_register_key_cb(input, input_arrived, NULL);
 		if (ret)
 			return;
 		uterm_input_wake_up(input);
 	} else if (ev->type == UTERM_MONITOR_FREE_SEAT) {
-		uterm_input_unregister_cb(input, input_arrived, NULL);
+		uterm_input_unregister_key_cb(input, input_arrived, NULL);
 		uterm_input_unref(input);
 	} else if (ev->type == UTERM_MONITOR_NEW_DEV) {
 		if (ev->dev_type == UTERM_MONITOR_INPUT)

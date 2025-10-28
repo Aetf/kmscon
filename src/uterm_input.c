@@ -439,8 +439,8 @@ void uterm_input_remove_dev(struct uterm_input *input, const char *node)
 }
 
 SHL_EXPORT
-int uterm_input_register_cb(struct uterm_input *input,
-				uterm_input_cb cb,
+int uterm_input_register_key_cb(struct uterm_input *input,
+				uterm_input_key_cb cb,
 				void *data)
 {
 	if (!input || !cb)
@@ -450,8 +450,8 @@ int uterm_input_register_cb(struct uterm_input *input,
 }
 
 SHL_EXPORT
-void uterm_input_unregister_cb(struct uterm_input *input,
-				uterm_input_cb cb,
+void uterm_input_unregister_key_cb(struct uterm_input *input,
+				uterm_input_key_cb cb,
 				void *data)
 {
 	if (!input || !cb)

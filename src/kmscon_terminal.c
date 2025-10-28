@@ -500,7 +500,7 @@ static void rm_display(struct kmscon_terminal *term, struct uterm_display *disp)
 }
 
 static void input_event(struct uterm_input *input,
-			struct uterm_input_event *ev,
+			struct uterm_input_key_event *ev,
 			void *data)
 {
 	struct kmscon_terminal *term = data;
@@ -631,7 +631,7 @@ static void terminal_destroy(struct kmscon_terminal *term)
 
 	terminal_close(term);
 	rm_all_screens(term);
-	uterm_input_unregister_cb(term->input, input_event, term);
+	uterm_input_unregister_key_cb(term->input, input_event, term);
 	ev_eloop_rm_fd(term->ptyfd);
 	kmscon_pty_unref(term->pty);
 	kmscon_font_unref(term->bold_font);
@@ -792,7 +792,7 @@ int kmscon_terminal_register(struct kmscon_session **out,
 	if (ret)
 		goto err_pty;
 
-	ret = uterm_input_register_cb(term->input, input_event, term);
+	ret = uterm_input_register_key_cb(term->input, input_event, term);
 	if (ret)
 		goto err_ptyfd;
 
@@ -810,7 +810,7 @@ int kmscon_terminal_register(struct kmscon_session **out,
 	return 0;
 
 err_input:
-	uterm_input_unregister_cb(term->input, input_event, term);
+	uterm_input_unregister_key_cb(term->input, input_event, term);
 err_ptyfd:
 	ev_eloop_rm_fd(term->ptyfd);
 err_pty:

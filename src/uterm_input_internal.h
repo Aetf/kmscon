@@ -58,8 +58,8 @@ struct uterm_input_dev {
 	char key_state_bits[SHL_DIV_ROUND_UP(KEY_CNT, CHAR_BIT)];
 
 	unsigned int num_syms;
-	struct uterm_input_event event;
-	struct uterm_input_event repeat_event;
+	struct uterm_input_key_event event;
+	struct uterm_input_key_event repeat_event;
 
 	bool repeating;
 	struct ev_timer *repeat_timer;
