@@ -37,6 +37,7 @@
 #include <string.h>
 #include "conf.h"
 #include "eloop.h"
+#include "font.h"
 #include "kmscon_conf.h"
 #include "kmscon_seat.h"
 #include "kmscon_terminal.h"
@@ -57,6 +58,17 @@ struct screen {
 
 	bool swapping;
 	bool pending;
+};
+
+struct kmscon_pointer {
+	bool visible;
+	bool select;
+	int32_t x;
+	int32_t y;
+	unsigned int posx;
+	unsigned int posy;
+	char *copy;
+	int copy_len;
 };
 
 struct kmscon_terminal {
@@ -82,6 +94,8 @@ struct kmscon_terminal {
 	struct kmscon_font_attr font_attr;
 	struct kmscon_font *font;
 	struct kmscon_font *bold_font;
+
+	struct kmscon_pointer pointer;
 };
 
 static void do_clear_margins(struct screen *scr)
@@ -130,6 +144,35 @@ static void do_clear_margins(struct screen *scr)
 
 static int font_set(struct kmscon_terminal *term);
 
+
+static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, unsigned int *posx, unsigned int *posy)
+{
+	int fw = term->font->attr.width;
+	int fh = term->font->attr.height;
+	int w = tsm_screen_get_width(term->console);
+	int h = tsm_screen_get_height(term->console);
+
+	*posx = x / fw;
+	*posy = y / fh;
+
+	if (*posx >= w)
+		*posx = w;
+
+	if (*posy >= h)
+		*posy = h;
+}
+
+static void draw_pointer(struct screen *scr)
+{
+	struct tsm_screen_attr attr;
+
+	if (!scr->term->pointer.visible)
+		return;
+
+	tsm_vte_get_def_attr(scr->term->vte, &attr);
+	kmscon_text_draw_pointer(scr->txt, scr->term->pointer.x, scr->term->pointer.y, &attr);
+}
+
 static void do_redraw_screen(struct screen *scr)
 {
 	int ret;
@@ -142,6 +185,7 @@ static void do_redraw_screen(struct screen *scr)
 
 	kmscon_text_prepare(scr->txt);
 	tsm_screen_draw(scr->term->console, kmscon_text_draw_cb, scr->txt);
+	draw_pointer(scr);
 	kmscon_text_render(scr->txt);
 
 	ret = uterm_display_swap(scr->disp, false);
@@ -243,6 +287,15 @@ static void osc_event(struct tsm_vte *vte, const char *osc_string,
 		log_info("Got OSC setForeground");
 		kmscon_session_set_foreground(term->session);
 	}
+}
+
+static void mouse_event(struct tsm_vte *vte, enum tsm_mouse_track_mode track_mode,
+			bool track_pixels, void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	term->pointer.select = false;
+	tsm_screen_selection_reset(term->console);
 }
 
 /*
@@ -585,6 +638,109 @@ static void input_event(struct uterm_input *input,
 	}
 }
 
+static void start_selection(struct tsm_screen *console, unsigned int x, unsigned int y)
+{
+	tsm_screen_selection_reset(console);
+	tsm_screen_selection_start(console, x, y);
+}
+
+static void update_selection(struct tsm_screen *console, unsigned int x, unsigned int y)
+{
+	tsm_screen_selection_target(console, x, y);
+}
+
+static void copy_selection(struct kmscon_terminal *term)
+{
+	if (term->pointer.copy) {
+		free(term->pointer.copy);
+		term->pointer.copy = NULL;
+		term->pointer.copy_len = 0;
+	}
+	term->pointer.copy_len = tsm_screen_selection_copy(term->console, &term->pointer.copy);
+}
+
+static void forward_pointer_event(struct kmscon_terminal *term, struct uterm_input_pointer_event *ev)
+{
+	unsigned int event;
+
+	switch (ev->event) {
+	case UTERM_MOVED:
+		event = TSM_MOUSE_EVENT_MOVED;
+		break;
+	case UTERM_BUTTON:
+		if (ev->pressed)
+			event = TSM_MOUSE_EVENT_PRESSED;
+		else
+			event = TSM_MOUSE_EVENT_RELEASED;
+		break;
+	default:
+		return;
+	}
+	tsm_vte_handle_mouse(term->vte, term->pointer.posx, term->pointer.posy,
+			term->pointer.x, term->pointer.y, ev->button, event, 0);
+}
+
+static void handle_pointer_button(struct kmscon_terminal *term, struct uterm_input_pointer_event *ev)
+{
+	switch(ev->button) {
+	case 0:
+		if (ev->pressed) {
+			term->pointer.select = true;
+			start_selection(term->console, term->pointer.posx, term->pointer.posy);
+		} else {
+			if (term->pointer.select)
+				copy_selection(term);
+			term->pointer.select = false;
+		}
+		break;
+	case 1:
+		term->pointer.select = false;
+		tsm_screen_selection_reset(term->console);
+		break;
+	case 2:
+		if (ev->pressed) {
+			kmscon_pty_write(term->pty, term->pointer.copy, term->pointer.copy_len);
+			tsm_screen_selection_reset(term->console);
+		}
+	}
+}
+
+static void pointer_event(struct uterm_input *input,
+			  struct uterm_input_pointer_event *ev,
+			  void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	if (ev->event == UTERM_MOVED) {
+		term->pointer.x = ev->pointer_x;
+		term->pointer.y = ev->pointer_y;
+
+		coord_to_cell(term, term->pointer.x, term->pointer.y, &term->pointer.posx, &term->pointer.posy);
+		term->pointer.visible = true;
+	}
+
+	if (tsm_vte_get_mouse_mode(term->vte) != TSM_MOUSE_TRACK_DISABLE &&
+	    ev->event != UTERM_SYNC) {
+		forward_pointer_event(term, ev);
+		return;
+	}
+
+	switch (ev->event) {
+	default:
+		break;
+	case UTERM_MOVED:
+		if (term->pointer.select)
+			update_selection(term->console,term->pointer.posx, term->pointer.posy);
+		break;
+	case UTERM_BUTTON:
+		handle_pointer_button(term, ev);
+		break;
+	case UTERM_SYNC:
+		redraw_all(term);
+		break;
+	}
+}
+
 static void rm_all_screens(struct kmscon_terminal *term)
 {
 	struct shl_dlist *iter;
@@ -631,6 +787,7 @@ static void terminal_destroy(struct kmscon_terminal *term)
 
 	terminal_close(term);
 	rm_all_screens(term);
+	uterm_input_unregister_pointer_cb(term->input, pointer_event, term);
 	uterm_input_unregister_key_cb(term->input, input_event, term);
 	ev_eloop_rm_fd(term->ptyfd);
 	kmscon_pty_unref(term->pty);
@@ -745,6 +902,7 @@ int kmscon_terminal_register(struct kmscon_session **out,
 					   BUILD_BACKSPACE_SENDS_DELETE);
 
 	tsm_vte_set_osc_cb(term->vte, osc_event, (void *)term);
+	tsm_vte_set_mouse_cb(term->vte, mouse_event, (void *)term);
 
 	ret = tsm_vte_set_palette(term->vte, term->conf->palette);
 	if (ret)
@@ -796,11 +954,15 @@ int kmscon_terminal_register(struct kmscon_session **out,
 	if (ret)
 		goto err_ptyfd;
 
+	ret = uterm_input_register_pointer_cb(term->input, pointer_event, term);
+	if (ret)
+		goto err_input;
+
 	ret = kmscon_seat_register_session(seat, &term->session, session_event,
 					   term);
 	if (ret) {
 		log_error("cannot register session for terminal: %d", ret);
-		goto err_input;
+		goto err_pointer;
 	}
 
 	ev_eloop_ref(term->eloop);
@@ -809,6 +971,8 @@ int kmscon_terminal_register(struct kmscon_session **out,
 	log_debug("new terminal object %p", term);
 	return 0;
 
+err_pointer:
+	uterm_input_unregister_pointer_cb(term->input, pointer_event, term);
 err_input:
 	uterm_input_unregister_key_cb(term->input, input_event, term);
 err_ptyfd:

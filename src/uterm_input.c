@@ -51,15 +51,24 @@
 
 static void input_free_dev(struct uterm_input_dev *dev);
 
-static void notify_key(struct uterm_input_dev *dev,
-			uint16_t type,
-			uint16_t code,
-			int32_t value)
+static void notify_event(struct uterm_input_dev *dev,
+			 uint16_t type,
+			 uint16_t code,
+			 int32_t value)
 {
-	if (type != EV_KEY)
-		return;
-
-	uxkb_dev_process(dev, value, code);
+	switch (type) {
+	case EV_KEY:
+		if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
+			uxkb_dev_process(dev, value, code);
+		pointer_dev_button(dev, code, value);
+		break;
+	case EV_REL:
+		pointer_dev_rel(dev, code, value);
+		break;
+	case EV_SYN:
+		pointer_dev_sync(dev);
+		break;
+	}
 }
 
 static void input_data_dev(struct ev_fd *fd, int mask, void *data)
@@ -93,7 +102,7 @@ static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 		} else {
 			n = len / sizeof(*ev);
 			for (i = 0; i < n; i++)
-				notify_key(dev, ev[i].type, ev[i].code,
+				notify_event(dev, ev[i].type, ev[i].code,
 								ev[i].value);
 		}
 	}
@@ -112,8 +121,8 @@ static int input_wake_up_dev(struct uterm_input_dev *dev)
 			  dev->node, errno);
 		return -EFAULT;
 	}
-
-	uxkb_dev_wake_up(dev);
+	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
+		uxkb_dev_wake_up(dev);
 
 	ret = ev_eloop_new_fd(dev->input->eloop, &dev->fd, dev->rfd,
 			      EV_READABLE, input_data_dev, dev);
@@ -131,7 +140,8 @@ static void input_sleep_dev(struct uterm_input_dev *dev)
 	if (dev->rfd < 0)
 		return;
 
-	uxkb_dev_sleep(dev);
+	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
+		uxkb_dev_sleep(dev);
 
 	dev->repeating = false;
 	ev_timer_update(dev->repeat_timer, NULL);
@@ -197,6 +207,7 @@ static void input_new_dev(struct uterm_input *input,
 	dev->input = input;
 	dev->rfd = -1;
 	dev->capabilities = capabilities;
+	dev->pointer.kind = POINTER_NONE;
 
 	dev->node = strdup(node);
 	if (!dev->node)
@@ -207,6 +218,8 @@ static void input_new_dev(struct uterm_input *input,
 		if (ret)
 			goto err_node;
 	}
+	if (dev->capabilities & UTERM_DEVICE_HAS_REL)
+		dev->pointer.kind = POINTER_MOUSE;
 
 	if (input->awake > 0) {
 		ret = input_wake_up_dev(dev);
@@ -285,6 +298,10 @@ int uterm_input_new(struct uterm_input **out,
 	if (ret)
 		goto err_free;
 
+	ret = shl_hook_new(&input->pointer_hook);
+	if (ret)
+		goto err_hook;
+
 	/* xkbcommon won't use the XKB_DEFAULT_OPTIONS environment
 	 * variable if options is an empty string.
 	 * So if all variables are empty, use NULL instead.
@@ -300,12 +317,15 @@ int uterm_input_new(struct uterm_input **out,
 	ret = uxkb_desc_init(input, model, layout, variant, options, locale,
 			     keymap, compose_file, compose_file_len);
 	if (ret)
-		goto err_hook;
+		goto err_hook_pointer;
 
 	llog_debug(input, "new object %p", input);
 	ev_eloop_ref(input->eloop);
 	*out = input;
 	return 0;
+
+err_hook_pointer:
+	shl_hook_free(input->pointer_hook);
 
 err_hook:
 	shl_hook_free(input->key_hook);
@@ -359,6 +379,7 @@ static unsigned int probe_device_capabilities(struct uterm_input *input,
 	unsigned int capabilities = 0;
 	unsigned long evbits[NLONGS(EV_CNT)] = { 0 };
 	unsigned long keybits[NLONGS(KEY_CNT)] = { 0 };
+	unsigned long relbits[NLONGS(REL_CNT)] = {0};
 
 	fd = open(node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
 	if (fd < 0)
@@ -386,6 +407,18 @@ static unsigned int probe_device_capabilities(struct uterm_input *input,
 				break;
 			}
 		}
+		if (input_bit_is_set(keybits, BTN_LEFT))
+			capabilities |= UTERM_DEVICE_HAS_MOUSE_BTN;
+	}
+
+	if (input_bit_is_set(evbits, EV_SYN) &&
+	    input_bit_is_set(evbits, EV_REL)) {
+		ret = ioctl(fd, EVIOCGBIT(EV_REL, sizeof(relbits)), relbits);
+		if (ret < 0)
+			goto err_ioctl;
+		if (input_bit_is_set(relbits, REL_X) &&
+		    input_bit_is_set(relbits, REL_Y))
+			capabilities |= UTERM_DEVICE_HAS_REL;
 	}
 
 	if (input_bit_is_set(evbits, EV_LED))
@@ -401,6 +434,8 @@ err_ioctl:
 	return 0;
 }
 
+#define HAS_ALL(caps, flags) (((caps) & (flags)) == (flags))
+
 SHL_EXPORT
 void uterm_input_add_dev(struct uterm_input *input, const char *node)
 {
@@ -410,12 +445,15 @@ void uterm_input_add_dev(struct uterm_input *input, const char *node)
 		return;
 
 	capabilities = probe_device_capabilities(input, node);
-	if (!(capabilities & UTERM_DEVICE_HAS_KEYS)) {
-		llog_debug(input, "ignoring non-useful device %s", node);
+	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_KEYS)) {
+		input_new_dev(input, node, capabilities);
 		return;
 	}
-
-	input_new_dev(input, node, capabilities);
+	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_REL | UTERM_DEVICE_HAS_MOUSE_BTN)) {
+		input_new_dev(input, node, capabilities);
+	} else {
+		llog_debug(input, "ignoring non-useful device %s", node);
+	}
 }
 
 SHL_EXPORT
@@ -458,6 +496,28 @@ void uterm_input_unregister_key_cb(struct uterm_input *input,
 		return;
 
 	shl_hook_rm_cast(input->key_hook, cb, data);
+}
+
+SHL_EXPORT
+int uterm_input_register_pointer_cb(struct uterm_input *input,
+				    uterm_input_pointer_cb cb,
+				    void *data)
+{
+	if (!input || !cb)
+		return -EINVAL;
+
+	return shl_hook_add_cast(input->pointer_hook, cb, data, false);
+}
+
+SHL_EXPORT
+void uterm_input_unregister_pointer_cb(struct uterm_input *input,
+				       uterm_input_pointer_cb cb,
+				       void *data)
+{
+	if (!input || !cb)
+		return;
+
+	shl_hook_rm_cast(input->pointer_hook, cb, data);
 }
 
 SHL_EXPORT
