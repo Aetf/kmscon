@@ -42,6 +42,21 @@
 enum uterm_input_device_capability {
 	UTERM_DEVICE_HAS_KEYS = (1 << 0),
 	UTERM_DEVICE_HAS_LEDS = (1 << 1),
+	UTERM_DEVICE_HAS_REL = (1 << 2),
+	UTERM_DEVICE_HAS_MOUSE_BTN = (1 << 4),
+};
+
+enum pointer_kind {
+	POINTER_NONE,
+	POINTER_MOUSE,
+};
+
+struct uterm_input_pointer {
+	/* For pointers (mouse/trackpad/trackpoint/touchscreen) */
+	enum pointer_kind kind;
+	enum uterm_input_pointer_type action;
+	int32_t x;
+	int32_t y;
 };
 
 struct uterm_input_dev {
@@ -52,6 +67,8 @@ struct uterm_input_dev {
 	int rfd;
 	char *node;
 	struct ev_fd *fd;
+
+	/* For keyboards */
 	struct xkb_state *state;
 	struct xkb_compose_state *compose_state;
 	/* Used in sleep/wake up to store the key's pressed/released state. */
@@ -63,6 +80,8 @@ struct uterm_input_dev {
 
 	bool repeating;
 	struct ev_timer *repeat_timer;
+
+	struct uterm_input_pointer pointer;
 };
 
 struct uterm_input {
@@ -78,6 +97,8 @@ struct uterm_input {
 	struct xkb_context *ctx;
 	struct xkb_keymap *keymap;
 	struct xkb_compose_table *compose_table;
+
+	struct shl_hook *pointer_hook;
 
 	struct shl_dlist devices;
 };
@@ -105,5 +126,11 @@ int uxkb_dev_process(struct uterm_input_dev *dev,
 		     uint16_t code);
 void uxkb_dev_sleep(struct uterm_input_dev *dev);
 void uxkb_dev_wake_up(struct uterm_input_dev *dev);
+
+void pointer_dev_rel(struct uterm_input_dev *dev,
+		     uint16_t code, int32_t value);
+void pointer_dev_button(struct uterm_input_dev *dev,
+		        uint16_t code, int32_t value);
+void pointer_dev_sync(struct uterm_input_dev *dev);
 
 #endif /* UTERM_INPUT_INTERNAL_H */
