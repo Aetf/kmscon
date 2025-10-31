@@ -121,5 +121,8 @@ void uterm_input_unregister_pointer_cb(struct uterm_input *input, uterm_input_po
 void uterm_input_sleep(struct uterm_input *input);
 void uterm_input_wake_up(struct uterm_input *input);
 bool uterm_input_is_awake(struct uterm_input *input);
+void uterm_input_set_pointer_max(struct uterm_input *input,
+				 unsigned int max_x,
+				 unsigned int max_y);
 
 #endif /* UTERM_UTERM_INPUT_H */

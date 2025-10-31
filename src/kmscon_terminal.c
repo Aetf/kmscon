@@ -245,6 +245,46 @@ static bool has_kms_display(struct kmscon_terminal *term)
 	return false;
 }
 
+/*
+ * Align the pointer maximum to the minimum width and height of all screens
+ * according to their orientation, as kmscon only support mirroring, and one
+ * terminal size for all screens.
+ */
+static void update_pointer_max_all(struct kmscon_terminal *term)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+	struct uterm_mode *mode;
+	unsigned int max_x = INT_MAX;
+	unsigned int max_y = INT_MAX;
+	unsigned int sw, sh;
+
+	if (!term->awake)
+		return;
+
+	shl_dlist_for_each(iter, &term->screens) {
+		scr = shl_dlist_entry(iter, struct screen, list);
+
+		mode = uterm_display_get_current(scr->disp);
+		if (!mode)
+			continue;
+
+		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_UPSIDE_DOWN) {
+			sw = uterm_mode_get_width(mode);
+			sh = uterm_mode_get_height(mode);
+		} else {
+			sw = uterm_mode_get_height(mode);
+			sh = uterm_mode_get_width(mode);
+		}
+		if (sw < max_x)
+			max_x = sw;
+		if (sh < max_y)
+			max_y = sh;
+	}
+	if (max_x < INT_MAX && max_y < INT_MAX)
+		uterm_input_set_pointer_max(term->input, max_x, max_y);
+}
+
 static void redraw_all_test(struct kmscon_terminal *term)
 {
 	struct shl_dlist *iter;
@@ -316,6 +356,8 @@ static void terminal_resize(struct kmscon_terminal *term,
 			    bool force, bool notify)
 {
 	bool resize = false;
+
+	update_pointer_max_all(term);
 
 	if (!term->min_cols || (cols > 0 && cols < term->min_cols)) {
 		term->min_cols = cols;
@@ -771,6 +813,8 @@ static int terminal_open(struct kmscon_terminal *term)
 		return ret;
 
 	term->opened = true;
+
+	update_pointer_max_all(term);
 	redraw_all(term);
 	return 0;
 }

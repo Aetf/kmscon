@@ -99,6 +99,8 @@ struct uterm_input {
 	struct xkb_compose_table *compose_table;
 
 	struct shl_hook *pointer_hook;
+	int32_t pointer_max_x;
+	int32_t pointer_max_y;
 
 	struct shl_dlist devices;
 };
