@@ -467,6 +467,30 @@ int kmscon_text_draw(struct kmscon_text *txt,
 }
 
 /**
+ * kmscon_text_draw_pointer:
+ * @txt: valid text renderer
+ * @x: X-position of the center of the pointer in pixel
+ * @y: Y-position of the center of the pointer in pixel
+ * @attr: glyph attributes
+ *
+ * This draws a single I glyph at the requested position. The position is a
+ * a pixel position! You must precede this call with kmscon_text_prepare().
+ * Use this function to feed the mouse pointer into the rendering pipeline
+ * and finally call kmscon_text_render().
+ *
+ * Returns: 0 on success or negative error code if it couldn't be drawn.
+ */
+int kmscon_text_draw_pointer(struct kmscon_text *txt,
+			    unsigned int x, unsigned int y,
+			    const struct tsm_screen_attr *attr)
+{
+	if (!txt || !txt->rendering || !txt->ops->draw_pointer)
+		return -EINVAL;
+
+	return txt->ops->draw_pointer(txt, x, y, attr);
+}
+
+/**
  * kmscon_text_render:
  * @txt: valid text renderer
  *
