@@ -577,3 +577,15 @@ bool uterm_input_is_awake(struct uterm_input *input)
 
 	return input->awake > 0;
 }
+
+SHL_EXPORT
+void uterm_input_set_pointer_max(struct uterm_input *input,
+				 unsigned int max_x,
+				 unsigned int max_y)
+{
+	if (!input)
+		return;
+
+	input->pointer_max_x = max_x;
+	input->pointer_max_y = max_y;
+}

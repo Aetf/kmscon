@@ -42,10 +42,18 @@ void pointer_dev_rel(struct uterm_input_dev *dev,
 	switch (code) {
 	case REL_X:
 		dev->pointer.x += value;
+		if (dev->pointer.x < 0)
+			dev->pointer.x = 0;
+		if (dev->pointer.x > dev->input->pointer_max_x)
+			dev->pointer.x = dev->input->pointer_max_x;
 		pointer_dev_send_move(dev);
 		break;
 	case REL_Y:
 		dev->pointer.y += value;
+		if (dev->pointer.y < 0)
+			dev->pointer.y = 0;
+		if (dev->pointer.y > dev->input->pointer_max_y)
+			dev->pointer.y = dev->input->pointer_max_y;
 		pointer_dev_send_move(dev);
 		break;
 	default:
