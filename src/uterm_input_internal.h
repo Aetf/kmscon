@@ -43,12 +43,16 @@ enum uterm_input_device_capability {
 	UTERM_DEVICE_HAS_KEYS = (1 << 0),
 	UTERM_DEVICE_HAS_LEDS = (1 << 1),
 	UTERM_DEVICE_HAS_REL = (1 << 2),
+	UTERM_DEVICE_HAS_ABS = (1 << 3),
 	UTERM_DEVICE_HAS_MOUSE_BTN = (1 << 4),
+	UTERM_DEVICE_HAS_TOUCH = (1 << 5),
 };
 
 enum pointer_kind {
 	POINTER_NONE,
 	POINTER_MOUSE,
+	POINTER_TOUCHPAD,
+	POINTER_VMOUSE,
 };
 
 struct uterm_input_pointer {
@@ -57,6 +61,15 @@ struct uterm_input_pointer {
 	enum uterm_input_pointer_type action;
 	int32_t x;
 	int32_t y;
+
+	bool touchpaddown;
+	int32_t off_x;
+	int32_t off_y;
+
+	int32_t min_x;
+	int32_t max_x;
+	int32_t min_y;
+	int32_t max_y;
 };
 
 struct uterm_input_dev {
@@ -131,8 +144,10 @@ void uxkb_dev_wake_up(struct uterm_input_dev *dev);
 
 void pointer_dev_rel(struct uterm_input_dev *dev,
 		     uint16_t code, int32_t value);
+void pointer_dev_abs(struct uterm_input_dev *dev,
+		     uint16_t code, int32_t value);
 void pointer_dev_button(struct uterm_input_dev *dev,
-		        uint16_t code, int32_t value);
+			uint16_t code, int32_t value);
 void pointer_dev_sync(struct uterm_input_dev *dev);
 
 #endif /* UTERM_INPUT_INTERNAL_H */

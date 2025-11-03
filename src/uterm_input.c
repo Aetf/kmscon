@@ -65,6 +65,9 @@ static void notify_event(struct uterm_input_dev *dev,
 	case EV_REL:
 		pointer_dev_rel(dev, code, value);
 		break;
+	case EV_ABS:
+		pointer_dev_abs(dev, code, value);
+		break;
 	case EV_SYN:
 		pointer_dev_sync(dev);
 		break;
@@ -192,6 +195,38 @@ static void input_exit_keyboard(struct uterm_input_dev *dev)
 	free(dev->event.keysyms);
 }
 
+static int input_init_abs(struct uterm_input_dev *dev)
+{
+	struct input_absinfo info;
+	int ret, fd;
+
+	fd = open(dev->node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
+	if (fd < 0)
+		return 0;
+
+	ret = ioctl(fd, EVIOCGABS(ABS_X), &info);
+	if (ret < 0)
+		goto err_closefd;
+
+	dev->pointer.min_x = info.minimum;
+	dev->pointer.max_x = info.maximum;
+
+	ret = ioctl(fd, EVIOCGABS(ABS_Y), &info);
+	if (ret < 0)
+		goto err_closefd;
+
+	dev->pointer.min_y = info.minimum;
+	dev->pointer.max_y = info.maximum;
+
+	llog_debug(dev->input, "ABSX min %d max %d ABSY min %d max %d\n",
+		   dev->pointer.min_x, dev->pointer.max_x,
+		   dev->pointer.min_y, dev->pointer.max_y);
+	return 0;
+
+err_closefd:
+	close(fd);
+	return ret;
+}
 
 static void input_new_dev(struct uterm_input *input,
 				const char *node,
@@ -217,6 +252,15 @@ static void input_new_dev(struct uterm_input *input,
 		ret = input_init_keyboard(dev);
 		if (ret)
 			goto err_node;
+	}
+	if (dev->capabilities & UTERM_DEVICE_HAS_ABS) {
+		ret = input_init_abs(dev);
+		if (ret)
+			goto err_node;
+		if (dev->capabilities & UTERM_DEVICE_HAS_TOUCH)
+			dev->pointer.kind = POINTER_TOUCHPAD;
+		else
+		 	dev->pointer.kind = POINTER_VMOUSE;
 	}
 	if (dev->capabilities & UTERM_DEVICE_HAS_REL)
 		dev->pointer.kind = POINTER_MOUSE;
@@ -379,7 +423,8 @@ static unsigned int probe_device_capabilities(struct uterm_input *input,
 	unsigned int capabilities = 0;
 	unsigned long evbits[NLONGS(EV_CNT)] = { 0 };
 	unsigned long keybits[NLONGS(KEY_CNT)] = { 0 };
-	unsigned long relbits[NLONGS(REL_CNT)] = {0};
+	unsigned long relbits[NLONGS(REL_CNT)] = { 0 };
+	unsigned long absbits[NLONGS(ABS_CNT)] = { 0 };
 
 	fd = open(node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
 	if (fd < 0)
@@ -409,6 +454,8 @@ static unsigned int probe_device_capabilities(struct uterm_input *input,
 		}
 		if (input_bit_is_set(keybits, BTN_LEFT))
 			capabilities |= UTERM_DEVICE_HAS_MOUSE_BTN;
+		if (input_bit_is_set(keybits, BTN_TOUCH))
+			capabilities |= UTERM_DEVICE_HAS_TOUCH;
 	}
 
 	if (input_bit_is_set(evbits, EV_SYN) &&
@@ -419,6 +466,16 @@ static unsigned int probe_device_capabilities(struct uterm_input *input,
 		if (input_bit_is_set(relbits, REL_X) &&
 		    input_bit_is_set(relbits, REL_Y))
 			capabilities |= UTERM_DEVICE_HAS_REL;
+	}
+
+	if (input_bit_is_set(evbits, EV_SYN) &&
+	    input_bit_is_set(evbits, EV_ABS)) {
+		ret = ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(absbits)), absbits);
+		if (ret < 0)
+			goto err_ioctl;
+		if (input_bit_is_set(absbits, ABS_X) &&
+		    input_bit_is_set(absbits, ABS_Y))
+			capabilities |= UTERM_DEVICE_HAS_ABS;
 	}
 
 	if (input_bit_is_set(evbits, EV_LED))
@@ -449,7 +506,9 @@ void uterm_input_add_dev(struct uterm_input *input, const char *node)
 		input_new_dev(input, node, capabilities);
 		return;
 	}
-	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_REL | UTERM_DEVICE_HAS_MOUSE_BTN)) {
+	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_REL | UTERM_DEVICE_HAS_MOUSE_BTN) ||
+	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_TOUCH) ||
+	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_MOUSE_BTN)) {
 		input_new_dev(input, node, capabilities);
 	} else {
 		llog_debug(input, "ignoring non-useful device %s", node);
