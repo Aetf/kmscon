@@ -1,3 +1,4 @@
+#include <linux/input-event-codes.h>
 #include <linux/input.h>
 #include "shl_hook.h"
 #include "shl_llog.h"
@@ -34,6 +35,7 @@ void pointer_dev_sync(struct uterm_input_dev *dev)
 	pev.event = UTERM_SYNC;
 
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
+	dev->pointer.touchpaddown = false;
 }
 
 void pointer_dev_rel(struct uterm_input_dev *dev,
@@ -61,6 +63,56 @@ void pointer_dev_rel(struct uterm_input_dev *dev,
 	}
 }
 
+void pointer_dev_abs(struct uterm_input_dev *dev,
+		     uint16_t code, int32_t value)
+{
+	switch (code) {
+	case ABS_X:
+		if (dev->pointer.kind == POINTER_TOUCHPAD) {
+			if (dev->pointer.touchpaddown == true)
+				dev->pointer.off_x = dev->pointer.x - value;
+
+			dev->pointer.x = dev->pointer.off_x + value;
+			if (dev->pointer.x < 0) {
+				dev->pointer.x = 0;
+				dev->pointer.off_x = -value;
+			}
+			if (dev->pointer.x > dev->input->pointer_max_x) {
+				dev->pointer.x = dev->input->pointer_max_x;
+				dev->pointer.off_x = dev->input->pointer_max_x - value;
+			}
+		} else if (dev->pointer.kind == POINTER_VMOUSE) {
+			dev->pointer.x = ((value - dev->pointer.min_x) * dev->input->pointer_max_x) / (dev->pointer.max_x - dev->pointer.min_x);
+		} else {
+			return;
+		}
+		break;
+	case ABS_Y:
+		if (dev->pointer.kind == POINTER_TOUCHPAD) {
+			if (dev->pointer.touchpaddown == true)
+				dev->pointer.off_y = dev->pointer.y - value;
+
+			dev->pointer.y = dev->pointer.off_y + value;
+			if (dev->pointer.y < 0) {
+				dev->pointer.y = 0;
+				dev->pointer.off_y = -value;
+			}
+			if (dev->pointer.y > dev->input->pointer_max_y) {
+				dev->pointer.y = dev->input->pointer_max_y;
+				dev->pointer.off_y = dev->input->pointer_max_y - value;
+			}
+		} else if (dev->pointer.kind == POINTER_VMOUSE) {
+			dev->pointer.y = ((value - dev->pointer.min_y) * dev->input->pointer_max_y) / (dev->pointer.max_y - dev->pointer.min_y);
+		} else {
+			return;
+		}
+		break;
+	default:
+		return;
+	}
+	pointer_dev_send_move(dev);
+}
+
 void pointer_dev_button(struct uterm_input_dev *dev,
 			uint16_t code, int32_t value)
 {
@@ -73,8 +125,13 @@ void pointer_dev_button(struct uterm_input_dev *dev,
 	case BTN_RIGHT:
 		pointer_dev_send_button(dev, 1, pressed);
 		break;
+	case BTN_TOOL_DOUBLETAP:
+	case BTN_TOOL_TRIPLETAP:
 	case BTN_MIDDLE:
 		pointer_dev_send_button(dev, 2, pressed);
+		break;
+	case BTN_TOUCH:
+		dev->pointer.touchpaddown = true;
 		break;
 	default:
 		break;
