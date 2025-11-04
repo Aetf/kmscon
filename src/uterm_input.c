@@ -466,6 +466,8 @@ static unsigned int probe_device_capabilities(struct uterm_input *input,
 		if (input_bit_is_set(relbits, REL_X) &&
 		    input_bit_is_set(relbits, REL_Y))
 			capabilities |= UTERM_DEVICE_HAS_REL;
+		if (input_bit_is_set(relbits, REL_WHEEL))
+			capabilities |= UTERM_DEVICE_HAS_WHEEL;
 	}
 
 	if (input_bit_is_set(evbits, EV_SYN) &&

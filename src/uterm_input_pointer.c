@@ -17,6 +17,16 @@ static void pointer_dev_send_move(struct uterm_input_dev *dev)
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 }
 
+static void pointer_dev_send_wheel(struct uterm_input_dev *dev, int32_t value)
+{
+	struct uterm_input_pointer_event pev = {0};
+
+	pev.event = UTERM_WHEEL;
+	pev.wheel = value;
+
+	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
+}
+
 static void pointer_dev_send_button(struct uterm_input_dev *dev, uint8_t button, bool pressed)
 {
 	struct uterm_input_pointer_event pev = {0};
@@ -57,6 +67,9 @@ void pointer_dev_rel(struct uterm_input_dev *dev,
 		if (dev->pointer.y > dev->input->pointer_max_y)
 			dev->pointer.y = dev->input->pointer_max_y;
 		pointer_dev_send_move(dev);
+		break;
+	case REL_WHEEL:
+		pointer_dev_send_wheel(dev, value);
 		break;
 	default:
 		break;

@@ -46,6 +46,7 @@ enum uterm_input_device_capability {
 	UTERM_DEVICE_HAS_ABS = (1 << 3),
 	UTERM_DEVICE_HAS_MOUSE_BTN = (1 << 4),
 	UTERM_DEVICE_HAS_TOUCH = (1 << 5),
+	UTERM_DEVICE_HAS_WHEEL = (1 << 6),
 };
 
 enum pointer_kind {
