@@ -344,7 +344,7 @@ try_next:
 
 	log_debug("new atlas of size %ux%u for %zu", width, height, newsize);
 
-	nsize = txt->cols * txt->rows;
+	nsize = txt->cols * txt->rows + 1; // +1 for the mouse pointer
 
 	atlas->cache_pos = malloc(sizeof(GLfloat) * nsize * 2 * 6);
 	if (!atlas->cache_pos)
@@ -677,6 +677,92 @@ static int gltex_draw(struct kmscon_text *txt,
 	return 0;
 }
 
+static int gltex_draw_pointer(struct kmscon_text *txt,
+			      unsigned int x, unsigned int y,
+			      const struct tsm_screen_attr *attr)
+{
+	struct gltex *gt = txt->data;
+	struct atlas *atlas;
+	struct glyph *glyph;
+	float gl_x1, gl_x2, gl_y1, gl_y2;
+	unsigned int sw, sh;
+	int ret, i, idx;
+	uint32_t ch = 'I';
+	uint64_t id = ch;
+
+	ret = find_glyph(txt, &glyph, id, &ch, 1, attr);
+	if (ret)
+		return ret;
+
+	atlas = glyph->atlas;
+
+	if (atlas->cache_num >= atlas->cache_size)
+		return -ERANGE;
+
+	if(txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		sw = gt->sw;
+		sh = gt->sh;
+	} else {
+		sw = gt->sh;
+		sh = gt->sw;
+	}
+
+	if (x > sw)
+		x = sw;
+
+	if (y > sh)
+		y = sh;
+
+	gl_x1 = x * 2.0 / sw - 1.0 - gt->advance_x / 2.0;
+	gl_y1 = 1.0 - y * 2.0 / sh + gt->advance_y / 2.0;
+	gl_x2 = gl_x1 + gt->advance_x;
+	gl_y2 = gl_y1 - gt->advance_y;
+
+	idx = atlas->cache_num * 2 * 6;
+
+	atlas->cache_pos[idx + 0] = gl_x1;
+	atlas->cache_pos[idx + 1] = gl_y1;
+	atlas->cache_pos[idx + 2] = gl_x1;
+	atlas->cache_pos[idx + 3] = gl_y2;
+	atlas->cache_pos[idx + 4] = gl_x2;
+	atlas->cache_pos[idx + 5] = gl_y2;
+
+	atlas->cache_pos[idx + 6] = gl_x1;
+	atlas->cache_pos[idx + 7] = gl_y1;
+	atlas->cache_pos[idx + 8] = gl_x2;
+	atlas->cache_pos[idx + 9] = gl_y2;
+	atlas->cache_pos[idx + 10] = gl_x2;
+	atlas->cache_pos[idx + 11] = gl_y1;
+
+	atlas->cache_texpos[idx + 0] = glyph->texoff;
+	atlas->cache_texpos[idx + 1] = 0.0;
+	atlas->cache_texpos[idx + 2] = glyph->texoff;
+	atlas->cache_texpos[idx + 3] = 1.0;
+	atlas->cache_texpos[idx + 4] = glyph->texoff + 1.0;
+	atlas->cache_texpos[idx + 5] = 1.0;
+
+	atlas->cache_texpos[idx + 6] = glyph->texoff;
+	atlas->cache_texpos[idx + 7] = 0.0;
+	atlas->cache_texpos[idx + 8] = glyph->texoff + 1.0;
+	atlas->cache_texpos[idx + 9] = 1.0;
+	atlas->cache_texpos[idx + 10] = glyph->texoff + 1.0;
+	atlas->cache_texpos[idx + 11] = 0.0;
+
+	for (i = 0; i < 6; ++i) {
+		idx = atlas->cache_num * 3 * 6 + i * 3;
+		atlas->cache_fgcol[idx + 0] = attr->fr / 255.0;
+		atlas->cache_fgcol[idx + 1] = attr->fg / 255.0;
+		atlas->cache_fgcol[idx + 2] = attr->fb / 255.0;
+		atlas->cache_bgcol[idx + 0] = attr->br / 255.0;
+		atlas->cache_bgcol[idx + 1] = attr->bg / 255.0;
+		atlas->cache_bgcol[idx + 2] = attr->bb / 255.0;
+	}
+
+	++atlas->cache_num;
+
+	return 0;
+}
+
 static int gltex_render(struct kmscon_text *txt)
 {
 	struct gltex *gt = txt->data;
@@ -743,6 +829,7 @@ struct kmscon_text_ops kmscon_text_gltex_ops = {
 	.rotate = gltex_rotate,
 	.prepare = gltex_prepare,
 	.draw = gltex_draw,
+	.draw_pointer = gltex_draw_pointer,
 	.render = gltex_render,
 	.abort = NULL,
 };
