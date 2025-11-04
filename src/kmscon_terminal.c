@@ -777,6 +777,12 @@ static void pointer_event(struct uterm_input *input,
 	case UTERM_BUTTON:
 		handle_pointer_button(term, ev);
 		break;
+	case UTERM_WHEEL:
+		if (ev->wheel > 0)
+			tsm_screen_sb_up(term->console, 3);
+		else
+		 	tsm_screen_sb_down(term->console, 3);
+		break;
 	case UTERM_SYNC:
 		redraw_all(term);
 		break;

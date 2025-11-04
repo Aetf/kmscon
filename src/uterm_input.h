@@ -75,6 +75,7 @@ struct uterm_input_key_event {
 enum uterm_input_pointer_type {
 	UTERM_MOVED,
 	UTERM_BUTTON,
+	UTERM_WHEEL,
 	UTERM_SYNC,
 };
 
@@ -82,6 +83,7 @@ struct uterm_input_pointer_event {
 	enum uterm_input_pointer_type event;
 	int32_t pointer_x;
 	int32_t pointer_y;
+	int32_t wheel;
 	uint8_t button;
 	bool pressed;
 };
