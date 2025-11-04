@@ -60,6 +60,7 @@ struct uterm_input_pointer {
 	/* For pointers (mouse/trackpad/trackpoint/touchscreen) */
 	enum pointer_kind kind;
 	enum uterm_input_pointer_type action;
+	struct timespec last_click;
 	int32_t x;
 	int32_t y;
 

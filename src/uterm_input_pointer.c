@@ -1,3 +1,4 @@
+#include <time.h>
 #include <linux/input-event-codes.h>
 #include <linux/input.h>
 #include "eloop.h"
@@ -39,13 +40,14 @@ static void pointer_dev_send_wheel(struct uterm_input_dev *dev, int32_t value)
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 }
 
-static void pointer_dev_send_button(struct uterm_input_dev *dev, uint8_t button, bool pressed)
+static void pointer_dev_send_button(struct uterm_input_dev *dev, uint8_t button, bool pressed, bool dbl_click)
 {
 	struct uterm_input_pointer_event pev = {0};
 
 	pev.event = UTERM_BUTTON;
 	pev.button = button;
 	pev.pressed = pressed;
+	pev.double_click = dbl_click;
 
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 }
@@ -142,19 +144,28 @@ void pointer_dev_abs(struct uterm_input_dev *dev,
 void pointer_dev_button(struct uterm_input_dev *dev,
 			uint16_t code, int32_t value)
 {
+	struct timespec tp;
+	uint64_t elapsed;
 	bool pressed = (value == 1);
+	bool dbl_click = false;
 
 	switch (code) {
 	case BTN_LEFT:
-		pointer_dev_send_button(dev, 0, pressed);
+		if (pressed) {
+			clock_gettime(CLOCK_MONOTONIC, &tp);
+			elapsed = (tp.tv_sec - dev->pointer.last_click.tv_sec) * 1000 + (tp.tv_nsec - dev->pointer.last_click.tv_nsec) / 1000000;
+			dbl_click = (elapsed < 500);
+			dev->pointer.last_click = tp;
+		}
+		pointer_dev_send_button(dev, 0, pressed, dbl_click);
 		break;
 	case BTN_RIGHT:
-		pointer_dev_send_button(dev, 1, pressed);
+		pointer_dev_send_button(dev, 1, pressed, false);
 		break;
 	case BTN_TOOL_DOUBLETAP:
 	case BTN_TOOL_TRIPLETAP:
 	case BTN_MIDDLE:
-		pointer_dev_send_button(dev, 2, pressed);
+		pointer_dev_send_button(dev, 2, pressed, false);
 		break;
 	case BTN_TOUCH:
 		dev->pointer.touchpaddown = true;
