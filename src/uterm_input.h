@@ -87,6 +87,7 @@ struct uterm_input_pointer_event {
 	int32_t wheel;
 	uint8_t button;
 	bool pressed;
+	bool double_click;
 };
 
 #define UTERM_INPUT_HAS_MODS(_ev, _mods) (((_ev)->mods & (_mods)) == (_mods))
