@@ -727,8 +727,14 @@ static void handle_pointer_button(struct kmscon_terminal *term, struct uterm_inp
 	switch(ev->button) {
 	case 0:
 		if (ev->pressed) {
-			term->pointer.select = true;
-			start_selection(term->console, term->pointer.posx, term->pointer.posy);
+			if (ev->double_click) {
+				tsm_screen_selection_word(term->console, term->pointer.posx, term->pointer.posy);
+				copy_selection(term);
+				term->pointer.select = false;
+			} else {
+				term->pointer.select = true;
+				start_selection(term->console, term->pointer.posx, term->pointer.posy);
+			}
 		} else {
 			if (term->pointer.select)
 				copy_selection(term);
