@@ -38,6 +38,7 @@
 #include <string.h>
 #include "font_rotate.h"
 #include "shl_log.h"
+#include "shl_misc.h"
 #include "text.h"
 #include "uterm_video.h"
 
@@ -242,6 +243,73 @@ static int bblit_draw(struct kmscon_text *txt,
 	return ret;
 }
 
+static int bblit_draw_pointer(struct kmscon_text *txt,
+			      unsigned int pointer_x, unsigned int pointer_y,
+			      const struct tsm_screen_attr *attr)
+{
+	struct uterm_video_buffer *bb_glyph;
+	struct uterm_mode *mode;
+	uint32_t ch = 'I';
+	uint64_t id = ch;
+	unsigned int sw, sh;
+	unsigned int m_x, m_y, x, y;
+	int ret;
+
+	mode = uterm_display_get_current(txt->disp);
+	if (!mode)
+		return -EINVAL;
+	sw = uterm_mode_get_width(mode);
+	sh = uterm_mode_get_height(mode);
+
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		m_x = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
+		m_y = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+	} else {
+		m_x = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+		m_y = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
+	}
+
+	ret = find_glyph(txt, &bb_glyph, id, &ch, 1, attr);
+	if (ret)
+		return ret;
+
+	switch (txt->orientation) {
+	default:
+	case OR_NORMAL:
+		x = pointer_x;
+		y = pointer_y;
+		break;
+	case OR_UPSIDE_DOWN:
+		x = sw - pointer_x;
+		y = sh - pointer_y;
+		break;
+	case OR_RIGHT:
+		x = sw - pointer_y;
+		y = pointer_x;
+		break;
+	case OR_LEFT:
+		x = pointer_y;
+		y = sh - pointer_x;
+		break;
+	}
+	if (x < m_x)
+		x = m_x;
+	if (x + m_x > sw)
+		x = sw - m_x;
+	if (y < m_y)
+		y = m_y;
+	if (y + m_y > sh)
+		y = sh - m_y;
+	x -= m_x;
+	y -= m_y;
+
+	/* draw glyph */
+	ret = uterm_display_fake_blend(txt->disp, bb_glyph, x, y,
+					       attr->fr, attr->fg, attr->fb,
+					       attr->br, attr->bg, attr->bb);
+	return ret;
+}
+
 struct kmscon_text_ops kmscon_text_bblit_ops = {
 	.name = "bblit",
 	.owner = NULL,
@@ -252,6 +320,7 @@ struct kmscon_text_ops kmscon_text_bblit_ops = {
 	.rotate = bblit_rotate,
 	.prepare = NULL,
 	.draw = bblit_draw,
+	.draw_pointer = bblit_draw_pointer,
 	.render = NULL,
 	.abort = NULL,
 };
