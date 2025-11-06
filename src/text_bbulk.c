@@ -32,7 +32,6 @@
  * pushes all of them at once to the video device.
  */
 
-#include <asm-generic/errno.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -41,6 +40,7 @@
 #include "font_rotate.h"
 #include "shl_hashtable.h"
 #include "shl_log.h"
+#include "shl_misc.h"
 #include "text.h"
 #include "uterm_video.h"
 
@@ -48,6 +48,8 @@
 
 struct bbulk {
 	struct uterm_video_blend_req *reqs;
+	unsigned int req_len;
+	unsigned int req_total_len;
 	struct shl_hashtable *glyphs;
 	struct shl_hashtable *bold_glyphs;
 };
@@ -101,10 +103,12 @@ static int bbulk_set(struct kmscon_text *txt)
 		txt->rows = sw / FONT_HEIGHT(txt);
 		txt->cols = sh / FONT_WIDTH(txt);
 	}
-	bb->reqs = malloc(sizeof(*bb->reqs) * txt->cols * txt->rows);
+
+	bb->req_total_len = txt->cols * txt->rows + 1; // + 1 for the pointer
+	bb->reqs = malloc(sizeof(*bb->reqs) * bb->req_total_len);
 	if (!bb->reqs)
 		return -ENOMEM;
-	memset(bb->reqs, 0, sizeof(*bb->reqs) * txt->cols * txt->rows);
+	memset(bb->reqs, 0, sizeof(*bb->reqs) * bb->req_total_len);
 
 	for (i = 0; i < txt->rows; ++i) {
 		for (j = 0; j < txt->cols; ++j) {
@@ -277,13 +281,94 @@ static int bbulk_draw(struct kmscon_text *txt,
 	return 0;
 }
 
+static int bblit_draw_pointer(struct kmscon_text *txt,
+			      unsigned int pointer_x, unsigned int pointer_y,
+			      const struct tsm_screen_attr *attr)
+{
+	struct bbulk *bb = txt->data;
+	struct uterm_video_blend_req *req;
+	struct uterm_video_buffer *bb_glyph;
+	struct uterm_mode *mode;
+	uint32_t ch = 'I';
+	uint64_t id = ch;
+	unsigned int sw, sh;
+	unsigned int m_x, m_y, x, y;
+	int ret;
+
+	mode = uterm_display_get_current(txt->disp);
+	if (!mode)
+		return -EINVAL;
+	sw = uterm_mode_get_width(mode);
+	sh = uterm_mode_get_height(mode);
+
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		m_x = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
+		m_y = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+	} else {
+		m_x = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+		m_y = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
+	}
+
+	// pointer is the last request
+	req = &bb->reqs[bb->req_total_len - 1];
+
+	ret = find_glyph(txt, &bb_glyph, id, &ch, 1, attr);
+	if (ret)
+		return ret;
+
+	req->buf = bb_glyph;
+
+	switch (txt->orientation) {
+	default:
+	case OR_NORMAL:
+		x = pointer_x;
+		y = pointer_y;
+		break;
+	case OR_UPSIDE_DOWN:
+		x = sw - pointer_x;
+		y = sh - pointer_y;
+		break;
+	case OR_RIGHT:
+		x = sw - pointer_y;
+		y = pointer_x;
+		break;
+	case OR_LEFT:
+		x = pointer_y;
+		y = sh - pointer_x;
+		break;
+	}
+	if (x < m_x)
+		x = m_x;
+	if (x + m_x > sw)
+		x = sw - m_x;
+	if (y < m_y)
+		y = m_y;
+	if (y + m_y > sh)
+		y = sh - m_y;
+	x -= m_x;
+	y -= m_y;
+
+	req->x = x;
+	req->y = y;
+
+	req->fr = attr->fr;
+	req->fg = attr->fg;
+	req->fb = attr->fb;
+	req->br = attr->br;
+	req->bg = attr->bg;
+	req->bb = attr->bb;
+
+	bb->req_len = bb->req_total_len;
+	return 0;
+}
+
 static int bbulk_render(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
 	int ret;
 
 	ret = uterm_display_fake_blendv(txt->disp, bb->reqs,
-					 txt->cols * txt->rows);
+					bb->req_len);
 	return ret;
 }
 
@@ -293,9 +378,9 @@ static int bbulk_prepare(struct kmscon_text *txt)
 	int i;
 
 	// Clear previous requests
-	for (i = 0; i < txt->rows * txt->cols; ++i)
+	for (i = 0; i < bb->req_total_len; ++i)
 		bb->reqs[i].buf = NULL;
-
+	bb->req_len = txt->cols * txt->rows;
 	return 0;
 }
 
@@ -309,6 +394,7 @@ struct kmscon_text_ops kmscon_text_bbulk_ops = {
 	.rotate = bbulk_rotate,
 	.prepare = bbulk_prepare,
 	.draw = bbulk_draw,
+	.draw_pointer = bblit_draw_pointer,
 	.render = bbulk_render,
 	.abort = NULL,
 };
