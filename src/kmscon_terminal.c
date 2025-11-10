@@ -786,6 +786,9 @@ static void pointer_event(struct uterm_input *input,
 	case UTERM_SYNC:
 		redraw_all(term);
 		break;
+	case UTERM_HIDE_TIMEOUT:
+		term->pointer.visible = false;
+		break;
 	}
 }
 
