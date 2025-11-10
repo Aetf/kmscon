@@ -111,6 +111,8 @@ struct kmscon_conf_t {
 	unsigned int xkb_repeat_delay;
 	/* keyboard key-repeat rate */
 	unsigned int xkb_repeat_rate;
+	/* Enable mouse support */
+	bool mouse;
 
 	/* Grabs / Keyboard-Shortcuts */
 	/* scroll-up grab */

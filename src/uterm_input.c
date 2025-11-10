@@ -496,7 +496,7 @@ err_ioctl:
 #define HAS_ALL(caps, flags) (((caps) & (flags)) == (flags))
 
 SHL_EXPORT
-void uterm_input_add_dev(struct uterm_input *input, const char *node)
+void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse)
 {
 	unsigned int capabilities;
 
@@ -511,7 +511,10 @@ void uterm_input_add_dev(struct uterm_input *input, const char *node)
 	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_REL | UTERM_DEVICE_HAS_MOUSE_BTN) ||
 	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_TOUCH) ||
 	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_MOUSE_BTN)) {
-		input_new_dev(input, node, capabilities);
+		if (mouse)
+			input_new_dev(input, node, capabilities);
+		else
+			llog_debug(input, "ignoring pointer device %s", node);
 	} else {
 		llog_debug(input, "ignoring non-useful device %s", node);
 	}
