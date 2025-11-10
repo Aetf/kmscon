@@ -157,7 +157,7 @@ static void monitor_event(struct uterm_monitor *mon,
 		uterm_input_unref(input);
 	} else if (ev->type == UTERM_MONITOR_NEW_DEV) {
 		if (ev->dev_type == UTERM_MONITOR_INPUT)
-			uterm_input_add_dev(input, ev->dev_node);
+			uterm_input_add_dev(input, ev->dev_node, true);
 	} else if (ev->type == UTERM_MONITOR_FREE_DEV) {
 		if (ev->dev_type == UTERM_MONITOR_INPUT)
 			uterm_input_remove_dev(input, ev->dev_node);
