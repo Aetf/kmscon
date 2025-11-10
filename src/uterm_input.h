@@ -77,6 +77,7 @@ enum uterm_input_pointer_type {
 	UTERM_BUTTON,
 	UTERM_WHEEL,
 	UTERM_SYNC,
+	UTERM_HIDE_TIMEOUT,
 };
 
 struct uterm_input_pointer_event {
