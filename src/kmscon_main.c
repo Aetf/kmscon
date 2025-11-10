@@ -476,7 +476,7 @@ static void app_monitor_event(struct uterm_monitor *mon,
 		case UTERM_MONITOR_INPUT:
 			log_debug("new input device %s on seat %s",
 				  ev->dev_node, seat->name);
-			kmscon_seat_add_input(seat->seat, ev->dev_node);
+			kmscon_seat_add_input(seat->seat, ev->dev_node, seat->conf->mouse);
 			break;
 		}
 		break;

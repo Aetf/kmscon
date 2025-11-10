@@ -107,7 +107,7 @@ int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop,
 void uterm_input_ref(struct uterm_input *input);
 void uterm_input_unref(struct uterm_input *input);
 
-void uterm_input_add_dev(struct uterm_input *input, const char *node);
+void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse);
 void uterm_input_remove_dev(struct uterm_input *input, const char *node);
 
 int uterm_input_register_key_cb(struct uterm_input *input, uterm_input_key_cb cb,

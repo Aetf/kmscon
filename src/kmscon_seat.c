@@ -924,12 +924,12 @@ void kmscon_seat_refresh_display(struct kmscon_seat *seat,
 	}
 }
 
-int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node)
+int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node, bool mouse)
 {
 	if (!seat || !node)
 		return -EINVAL;
 
-	uterm_input_add_dev(seat->input, node);
+	uterm_input_add_dev(seat->input, node, mouse);
 	return 0;
 }
 

@@ -1004,9 +1004,11 @@ int kmscon_terminal_register(struct kmscon_session **out,
 	if (ret)
 		goto err_ptyfd;
 
-	ret = uterm_input_register_pointer_cb(term->input, pointer_event, term);
-	if (ret)
-		goto err_input;
+	if (term->conf->mouse) {
+		ret = uterm_input_register_pointer_cb(term->input, pointer_event, term);
+		if (ret)
+			goto err_input;
+	}
 
 	ret = kmscon_seat_register_session(seat, &term->session, session_event,
 					   term);
