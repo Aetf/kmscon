@@ -1,10 +1,22 @@
 #include <linux/input-event-codes.h>
 #include <linux/input.h>
+#include "eloop.h"
 #include "shl_hook.h"
 #include "shl_llog.h"
 #include "uterm_input.h"
 #include "uterm_input_internal.h"
 
+
+static void pointer_update_inactivity_timer(struct uterm_input_dev *dev)
+{
+	struct itimerspec spec;
+
+	spec.it_interval.tv_nsec = 0;
+	spec.it_interval.tv_sec = 0;
+	spec.it_value.tv_nsec = 0;
+	spec.it_value.tv_sec = 20;
+	ev_timer_update(dev->input->hide_pointer, &spec);
+}
 
 static void pointer_dev_send_move(struct uterm_input_dev *dev)
 {
@@ -45,6 +57,7 @@ void pointer_dev_sync(struct uterm_input_dev *dev)
 	pev.event = UTERM_SYNC;
 
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
+	pointer_update_inactivity_timer(dev);
 	dev->pointer.touchpaddown = false;
 }
 

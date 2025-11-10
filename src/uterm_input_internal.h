@@ -115,6 +115,7 @@ struct uterm_input {
 	struct shl_hook *pointer_hook;
 	int32_t pointer_max_x;
 	int32_t pointer_max_y;
+	struct ev_timer *hide_pointer;
 
 	struct shl_dlist devices;
 };

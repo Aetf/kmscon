@@ -295,6 +295,16 @@ static void input_free_dev(struct uterm_input_dev *dev)
 	free(dev);
 }
 
+static void hide_pointer_timer(struct ev_timer *timer, uint64_t num, void *data)
+{
+	struct uterm_input *input = data;
+	struct uterm_input_pointer_event pev;
+
+	pev.event = UTERM_HIDE_TIMEOUT;
+
+	shl_hook_call(input->pointer_hook, input, &pev);
+}
+
 SHL_EXPORT
 int uterm_input_new(struct uterm_input **out,
 		    struct ev_eloop *eloop,
@@ -346,6 +356,11 @@ int uterm_input_new(struct uterm_input **out,
 	if (ret)
 		goto err_hook;
 
+	ret = ev_eloop_new_timer(input->eloop, &input->hide_pointer, NULL,
+				 hide_pointer_timer, input);
+	if (ret)
+		goto err_hook_pointer;
+
 	/* xkbcommon won't use the XKB_DEFAULT_OPTIONS environment
 	 * variable if options is an empty string.
 	 * So if all variables are empty, use NULL instead.
@@ -361,12 +376,15 @@ int uterm_input_new(struct uterm_input **out,
 	ret = uxkb_desc_init(input, model, layout, variant, options, locale,
 			     keymap, compose_file, compose_file_len);
 	if (ret)
-		goto err_hook_pointer;
+		goto err_hide_timer;
 
 	llog_debug(input, "new object %p", input);
 	ev_eloop_ref(input->eloop);
 	*out = input;
 	return 0;
+
+err_hide_timer:
+	ev_eloop_rm_timer(input->hide_pointer);
 
 err_hook_pointer:
 	shl_hook_free(input->pointer_hook);
