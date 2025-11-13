@@ -81,6 +81,10 @@ struct kmscon_app {
 	unsigned int running_seats;
 };
 
+const char be_drm3d[] = "drm3d";
+const char be_drm2d[] = "drm2d";
+const char be_fbdev[] = "fbdev";
+
 static int app_seat_event(struct kmscon_seat *s, unsigned int event,
 			  void *data)
 {
@@ -325,7 +329,7 @@ static int app_seat_add_video(struct app_seat *seat,
 			      struct uterm_monitor_dev *udev)
 {
 	int ret;
-	const struct uterm_video_module *mode;
+	const char *backend;
 	struct app_video *vid;
 
 	if (seat->app->exiting)
@@ -360,11 +364,11 @@ static int app_seat_add_video(struct app_seat *seat,
 
 	if (type == UTERM_MONITOR_DRM) {
 		if (seat->conf->hwaccel)
-			mode = UTERM_VIDEO_DRM3D;
+			backend = be_drm3d;
 		else
-			mode = UTERM_VIDEO_DRM2D;
+			backend = be_drm2d;
 	} else {
-		mode = UTERM_VIDEO_FBDEV;
+		backend = be_fbdev;
 	}
 
 	unsigned int desired_width = 0;
@@ -377,14 +381,14 @@ static int app_seat_add_video(struct app_seat *seat,
 			desired_height = 0;
 		}
 	}
-	ret = uterm_video_new(&vid->video, seat->app->eloop, node, mode,
+	ret = uterm_video_new(&vid->video, seat->app->eloop, node, backend,
 	                      desired_width, desired_height);
 	if (ret) {
-		if (mode == UTERM_VIDEO_DRM3D) {
+		if (backend == be_drm3d) {
 			log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
 				 vid->node, seat->name, ret);
 			ret = uterm_video_new(&vid->video, seat->app->eloop,
-					      node, UTERM_VIDEO_DRM2D, desired_width, desired_height);
+					      node, be_drm2d, desired_width, desired_height);
 			if (ret)
 				goto err_node;
 		} else {
@@ -627,6 +631,8 @@ int main(int argc, char **argv)
 	kmscon_load_modules();
 	kmscon_font_register(&kmscon_font_8x16_ops);
 	kmscon_text_register(&kmscon_text_bblit_ops);
+	uterm_register_drm2d();
+	uterm_register_fbdev();
 
 	memset(&app, 0, sizeof(app));
 	app.conf_ctx = conf_ctx;

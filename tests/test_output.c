@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 	struct uterm_video *video;
 	int ret;
 	const char *node;
-	const struct uterm_video_module *mode;
+	const char *mode;
 	size_t onum;
 
 	onum = sizeof(options) / sizeof(*options);
@@ -207,10 +207,10 @@ int main(int argc, char **argv)
 		goto err_fail;
 
 	if (output_conf.fbdev) {
-		mode = UTERM_VIDEO_FBDEV;
+		mode = "fbdev";
 		node = "/dev/fb0";
 	} else {
-		mode = UTERM_VIDEO_DRM3D;
+		mode = "drm3d";
 		node = "/dev/dri/card0";
 	}
 
@@ -223,10 +223,10 @@ int main(int argc, char **argv)
 			      output_conf.desired_width,
 			      output_conf.desired_height);
 	if (ret) {
-		if (mode == UTERM_VIDEO_DRM3D) {
+		if (!output_conf.fbdev) {
 			log_notice("cannot create drm device; trying drm2d mode");
 			ret = uterm_video_new(&video, eloop, node,
-					      UTERM_VIDEO_DRM2D,
+					      "drm2d",
 					      output_conf.desired_width,
 					      output_conf.desired_height);
 			if (ret)

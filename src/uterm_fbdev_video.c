@@ -649,18 +649,15 @@ static int video_wake_up(struct uterm_video *video)
 	return 0;
 }
 
-static const struct video_ops fbdev_video_ops = {
+struct uterm_video_module fbdev_module = {
+	.name = "fbdev",
+	.owner = NULL,
+	.ops = {
 	.init = video_init,
 	.destroy = video_destroy,
 	.segfault = NULL, /* TODO */
 	.poll = NULL,
 	.sleep = video_sleep,
 	.wake_up = video_wake_up,
+	}
 };
-
-static const struct uterm_video_module fbdev_module = {
-	.ops = &fbdev_video_ops,
-};
-
-SHL_EXPORT
-const struct uterm_video_module *UTERM_VIDEO_FBDEV = &fbdev_module;

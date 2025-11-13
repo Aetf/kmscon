@@ -79,7 +79,9 @@ struct video_ops {
 };
 
 struct uterm_video_module {
-	const struct video_ops *ops;
+	const char *name;
+	struct shl_module *owner;
+	const struct video_ops ops;
 };
 
 #define VIDEO_CALL(func, els, ...) (func ? func(__VA_ARGS__) : els)
@@ -165,7 +167,6 @@ struct uterm_video {
 	unsigned int desired_height;
 
 	const struct uterm_video_module *mod;
-	const struct video_ops *ops;
 	void *data;
 };
 

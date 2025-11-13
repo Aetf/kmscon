@@ -192,7 +192,7 @@ int uterm_display_fake_blendv(struct uterm_display *disp,
 /* video interface */
 
 int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop,
-		    const char *node, const struct uterm_video_module *mod,
+		    const char *node, const char *backend,
 		    unsigned int desired_width, unsigned int desired_height);
 void uterm_video_ref(struct uterm_video *video);
 void uterm_video_unref(struct uterm_video *video);
@@ -204,29 +204,32 @@ int uterm_video_register_cb(struct uterm_video *video, uterm_video_cb cb,
 void uterm_video_unregister_cb(struct uterm_video *video, uterm_video_cb cb,
 			       void *data);
 
+int uterm_video_register(const struct uterm_video_module *ops);
+void uterm_video_unregister(const char *name);
 void uterm_video_sleep(struct uterm_video *video);
 int uterm_video_wake_up(struct uterm_video *video);
 bool uterm_video_is_awake(struct uterm_video *video);
 void uterm_video_poll(struct uterm_video *video);
 
-/* external modules */
+#ifdef BUILD_ENABLE_VIDEO_DRM2D
+extern struct uterm_video_module drm2d_module;
+
+static inline void uterm_register_drm2d(void) {
+	uterm_video_register(&drm2d_module);
+}
+
+#else
+static inline void uterm_register_drm2d(void) {}
+#endif
 
 #ifdef BUILD_ENABLE_VIDEO_FBDEV
-extern const struct uterm_video_module *UTERM_VIDEO_FBDEV;
-#else
-#define UTERM_VIDEO_FBDEV NULL
-#endif
+extern struct uterm_video_module fbdev_module;
 
-#ifdef BUILD_ENABLE_VIDEO_DRM2D
-extern const struct uterm_video_module *UTERM_VIDEO_DRM2D;
+static inline void uterm_register_fbdev(void) {
+	uterm_video_register(&fbdev_module);
+}
 #else
-#define UTERM_VIDEO_DRM2D NULL
-#endif
-
-#ifdef BUILD_ENABLE_VIDEO_DRM3D
-extern const struct uterm_video_module *UTERM_VIDEO_DRM3D;
-#else
-#define UTERM_VIDEO_DRM3D NULL
+static inline void uterm_register_fbdev(void) {}
 #endif
 
 #endif /* UTERM_UTERM_VIDEO_H */

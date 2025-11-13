@@ -376,18 +376,14 @@ static int video_wake_up(struct uterm_video *video)
 	return 0;
 }
 
-static const struct video_ops drm2d_video_ops = {
-	.init = video_init,
-	.destroy = video_destroy,
-	.segfault = NULL, /* TODO: reset all saved CRTCs on segfault */
-	.poll = video_poll,
-	.sleep = video_sleep,
-	.wake_up = video_wake_up,
+struct uterm_video_module drm2d_module = {
+	.name = "drm2d",
+	.owner = NULL,
+	.ops = {
+		.init = video_init,
+		.destroy = video_destroy,
+		.segfault = NULL, /* TODO: reset all saved CRTCs on segfault */
+		.poll = video_poll,
+		.sleep = video_sleep,
+		.wake_up = video_wake_up,},
 };
-
-static const struct uterm_video_module drm2d_module = {
-	.ops = &drm2d_video_ops,
-};
-
-SHL_EXPORT
-const struct uterm_video_module *UTERM_VIDEO_DRM2D = &drm2d_module;

@@ -569,17 +569,21 @@ static int aftercheck_help(struct conf_option *opt, int argc, char **argv,
 static int aftercheck_drm(struct conf_option *opt, int argc, char **argv,
 			  int idx)
 {
+#ifndef BUILD_ENABLE_VIDEO_DRM2D
+#ifndef BUILD_ENABLE_VIDEO_DRM3D
 	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, drm);
 
 	/* disable --drm if DRM runtime support is not available */
 	/* drmAvailable() is broken, as it only checks for GPU 0, but with
 	 * with simpledrm, it's often the case that the first gpu ends up being
 	 * GPU 1. So only checks if drm2d or drm3d is available */
-	if (conf->drm && !UTERM_VIDEO_DRM3D && !UTERM_VIDEO_DRM2D) {
+
+	if (conf->drm) {
 		log_info("no DRM runtime support available; disabling --drm");
 		conf->drm = false;
 	}
-
+#endif
+#endif
 	return 0;
 }
 

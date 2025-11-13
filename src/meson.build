@@ -132,24 +132,6 @@ if enable_video_drm2d
     'uterm_drm2d_render.c'
   ]
 endif
-if enable_video_drm3d
-  uterm_srcs += [
-    'uterm_drm3d_video.c',
-    'uterm_drm3d_render.c',
-    embed_gen.process('uterm_drm3d_blend.vert', extra_args: shader_regex),
-    embed_gen.process('uterm_drm3d_blend.frag', extra_args: shader_regex),
-    embed_gen.process('uterm_drm3d_blit.vert', extra_args: shader_regex),
-    embed_gen.process('uterm_drm3d_blit.frag', extra_args: shader_regex),
-    embed_gen.process('uterm_drm3d_fill.vert', extra_args: shader_regex),
-    embed_gen.process('uterm_drm3d_fill.frag', extra_args: shader_regex),
-  ]
-  uterm_dep += [
-    shl_gl_deps,
-    egl_deps,
-    gbm_deps,
-    glesv2_deps,
-  ]
-endif
 uterm = static_library('uterm', uterm_srcs,
   dependencies: uterm_dep
 )
@@ -157,6 +139,25 @@ uterm_deps = declare_dependency(
   link_with: [uterm],
   dependencies: uterm_dep
 )
+
+if enable_video_drm3d
+  mod_drm3d = shared_module('mod-drm3d', [
+    'uterm_drm3d_video.c',
+    'uterm_drm3d_render.c',
+    'uterm_mod_drm3d.c',
+    embed_gen.process('uterm_drm3d_blend.vert', extra_args: shader_regex),
+    embed_gen.process('uterm_drm3d_blend.frag', extra_args: shader_regex),
+    embed_gen.process('uterm_drm3d_blit.vert', extra_args: shader_regex),
+    embed_gen.process('uterm_drm3d_blit.frag', extra_args: shader_regex),
+    embed_gen.process('uterm_drm3d_fill.vert', extra_args: shader_regex),
+    embed_gen.process('uterm_drm3d_fill.frag', extra_args: shader_regex),
+    ],
+    name_prefix: '',
+    dependencies: [uterm_deps, shl_deps, shl_gl_deps, libdrm_deps, egl_deps, gbm_deps, glesv2_deps],
+    install: true,
+    install_dir: moduledir,
+  )
+endif
 
 #
 # Unifont Generator
