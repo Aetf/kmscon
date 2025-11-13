@@ -35,14 +35,26 @@
 #include <string.h>
 #include <unistd.h>
 #include "eloop.h"
+#include "shl_module.h"
 #include "shl_dlist.h"
 #include "shl_hook.h"
 #include "shl_log.h"
 #include "shl_misc.h"
+#include "shl_register.h"
 #include "uterm_video.h"
 #include "uterm_video_internal.h"
 
 #define LOG_SUBSYSTEM "video"
+
+static struct shl_register video_reg = SHL_REGISTER_INIT(video_reg);
+
+
+static inline void uterm_video_destroy(void *data)
+{
+	const struct uterm_video_module *ops = data;
+
+	shl_module_unref(ops->owner);
+}
 
 SHL_EXPORT
 const char *uterm_dpms_to_name(int dpms)
@@ -541,24 +553,37 @@ int uterm_display_fake_blendv(struct uterm_display *disp,
 
 SHL_EXPORT
 int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop,
-		    const char *node, const struct uterm_video_module *mod,
+		    const char *node, const char *backend,
 		    unsigned int desired_width, unsigned int desired_height)
 {
+	struct shl_register_record *record;
+	const char *name = backend ? backend : "<default>";
 	struct uterm_video *video;
 	int ret;
 
 	if (!out || !eloop)
 		return -EINVAL;
-	if (!mod || !mod->ops)
-		return -EOPNOTSUPP;
+
+	if (backend)
+		record = shl_register_find(&video_reg, backend);
+	else
+		record = shl_register_first(&video_reg);
+
+	if (!record) {
+		log_error("requested backend '%s' not found", name);
+		return -ENOENT;
+	}
 
 	video = malloc(sizeof(*video));
-	if (!video)
-		return -ENOMEM;
+	if (!video) {
+		ret = -ENOMEM;
+		goto err_unref;
+	}
 	memset(video, 0, sizeof(*video));
 	video->ref = 1;
-	video->mod = mod;
-	video->ops = mod->ops;
+
+	video->mod = record->data;
+
 	video->eloop = eloop;
 	shl_dlist_init(&video->displays);
 
@@ -566,7 +591,7 @@ int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop,
 	if (ret)
 		goto err_free;
 
-	ret = VIDEO_CALL(video->ops->init, 0, video, node);
+	ret = VIDEO_CALL(video->mod->ops.init, 0, video, node);
 	if (ret)
 		goto err_hook;
 
@@ -582,6 +607,8 @@ err_hook:
 	shl_hook_free(video->hook);
 err_free:
 	free(video);
+err_unref:
+	shl_register_record_unref(record);
 	return ret;
 }
 
@@ -610,7 +637,7 @@ void uterm_video_unref(struct uterm_video *video)
 		uterm_display_unbind(disp);
 	}
 
-	VIDEO_CALL(video->ops->destroy, 0, video);
+	VIDEO_CALL(video->mod->ops.destroy, 0, video);
 	shl_hook_free(video->hook);
 	ev_eloop_unref(video->eloop);
 	free(video);
@@ -622,7 +649,7 @@ void uterm_video_segfault(struct uterm_video *video)
 	if (!video)
 		return;
 
-	VIDEO_CALL(video->ops->segfault, 0, video);
+	VIDEO_CALL(video->mod->ops.segfault, 0, video);
 }
 
 SHL_EXPORT
@@ -655,6 +682,51 @@ void uterm_video_unregister_cb(struct uterm_video *video, uterm_video_cb cb,
 	shl_hook_rm_cast(video->hook, cb, data);
 }
 
+/**
+ * kmscon_video_register:
+ * @ops: a video module.
+ *
+ * This register a new video backend with operations set to @ops. The name
+ * @ops->name must be valid.
+ *
+ * Returns: 0 on success, negative error code on failure
+ */
+SHL_EXPORT
+int uterm_video_register(const struct uterm_video_module *ops)
+{
+	int ret;
+
+	if (!ops)
+		return -EINVAL;
+
+	log_debug("register video backend %s", ops->name);
+
+	ret = shl_register_add_cb(&video_reg, ops->name, (void*)ops,
+				  uterm_video_destroy);
+	if (ret) {
+		log_error("cannot register video backend %s: %d", ops->name,
+			  ret);
+		return ret;
+	}
+
+	shl_module_ref(ops->owner);
+	return 0;
+}
+
+/**
+ * kmscon_video_unregister:
+ * @name: Name of backend
+ *
+ * This unregisters the video-backend that is registered with name @name. If
+ * @name is not found, nothing is done.
+ */
+SHL_EXPORT
+void uterm_video_unregister(const char *name)
+{
+	log_debug("unregister backend %s", name);
+	shl_register_remove(&video_reg, name);
+}
+
 SHL_EXPORT
 void uterm_video_sleep(struct uterm_video *video)
 {
@@ -665,7 +737,7 @@ void uterm_video_sleep(struct uterm_video *video)
 
 	VIDEO_CB(video, NULL, UTERM_SLEEP);
 	video->flags &= ~VIDEO_AWAKE;
-	VIDEO_CALL(video->ops->sleep, 0, video);
+	VIDEO_CALL(video->mod->ops.sleep, 0, video);
 }
 
 SHL_EXPORT
@@ -680,7 +752,7 @@ int uterm_video_wake_up(struct uterm_video *video)
 
 	log_debug("wake up");
 
-	ret = VIDEO_CALL(video->ops->wake_up, 0, video);
+	ret = VIDEO_CALL(video->mod->ops.wake_up, 0, video);
 	if (ret) {
 		video->flags &= ~VIDEO_AWAKE;
 		return ret;
@@ -703,5 +775,5 @@ void uterm_video_poll(struct uterm_video *video)
 	if (!video)
 		return;
 
-	VIDEO_CALL(video->ops->poll, 0, video);
+	VIDEO_CALL(video->mod->ops.poll, 0, video);
 }
