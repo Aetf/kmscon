@@ -144,7 +144,7 @@ endif
 enable_docs = get_option('docs').require(xsltproc.found() and have_manpages_stylesheet).allowed()
 
 # Additionally check if glesv2 is needed
-enable_glesv2 = enable_video_drm3d and enable_renderer_gltex
+enable_glesv2 = enable_video_drm3d or enable_renderer_gltex
 
 #
 # Other configuration output
