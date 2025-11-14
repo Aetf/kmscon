@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "text.h"
-#include "kmscon_module_interface.h"
+#include "shl_module_interface.h"
 #include "shl_log.h"
 
 #define LOG_SUBSYSTEM "mod_bbulk"
@@ -40,7 +40,7 @@ static int kmscon_bbulk_load(void)
 {
 	int ret;
 
-	kmscon_text_bbulk_ops.owner = KMSCON_THIS_MODULE;
+	kmscon_text_bbulk_ops.owner = SHL_THIS_MODULE;
 	ret = kmscon_text_register(&kmscon_text_bbulk_ops);
 	if (ret) {
 		log_error("cannot register bbulk renderer");
@@ -55,4 +55,4 @@ static void kmscon_bbulk_unload(void)
 	kmscon_text_unregister(kmscon_text_bbulk_ops.name);
 }
 
-KMSCON_MODULE(NULL, kmscon_bbulk_load, kmscon_bbulk_unload, NULL);
+SHL_MODULE(NULL, kmscon_bbulk_load, kmscon_bbulk_unload, NULL);

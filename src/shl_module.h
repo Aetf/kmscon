@@ -51,21 +51,21 @@
  * the module can release its resources.
  */
 
-#ifndef KMSCON_MODULE_H
-#define KMSCON_MODULE_H
+#ifndef SHL_MODULE_H
+#define SHL_MODULE_H
 
 #include <stdlib.h>
 
-struct kmscon_module;
+struct shl_module;
 
-int kmscon_module_open(struct kmscon_module **out, const char *file);
-void kmscon_module_ref(struct kmscon_module *module);
-void kmscon_module_unref(struct kmscon_module *module);
+int shl_module_open(struct shl_module **out, const char *file);
+void shl_module_ref(struct shl_module *module);
+void shl_module_unref(struct shl_module *module);
 
-int kmscon_module_load(struct kmscon_module *module);
-void kmscon_module_unload(struct kmscon_module *module);
+int shl_module_load(struct shl_module *module);
+void shl_module_unload(struct shl_module *module);
 
 void kmscon_load_modules(void);
 void kmscon_unload_modules(void);
 
-#endif /* KMSCON_MODULE_H */
+#endif /* SHL_MODULE_H */

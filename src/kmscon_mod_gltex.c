@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "text.h"
-#include "kmscon_module_interface.h"
+#include "shl_module_interface.h"
 #include "shl_log.h"
 
 #define LOG_SUBSYSTEM "mod_gltex"
@@ -40,7 +40,7 @@ static int kmscon_gltex_load(void)
 {
 	int ret;
 
-	kmscon_text_gltex_ops.owner = KMSCON_THIS_MODULE;
+	kmscon_text_gltex_ops.owner = SHL_THIS_MODULE;
 	ret = kmscon_text_register(&kmscon_text_gltex_ops);
 	if (ret) {
 		log_error("cannot register gltex renderer");
@@ -55,4 +55,4 @@ static void kmscon_gltex_unload(void)
 	kmscon_text_unregister(kmscon_text_gltex_ops.name);
 }
 
-KMSCON_MODULE(NULL, kmscon_gltex_load, kmscon_gltex_unload, NULL);
+SHL_MODULE(NULL, kmscon_gltex_load, kmscon_gltex_unload, NULL);

@@ -47,6 +47,7 @@ keymap_regex = [
 #
 shl_srcs = [
   'shl_log.c',
+  'shl_module.c',
   githead,
 ]
 shl_dep = [
@@ -246,7 +247,6 @@ kmscon_srcs = [
   'font_8x16.c',
   'text.c',
   'text_bblit.c',
-  'kmscon_module.c',
   'kmscon_seat.c',
   'kmscon_conf.c',
   'kmscon_main.c',

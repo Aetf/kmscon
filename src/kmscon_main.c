@@ -34,7 +34,7 @@
 #include "conf.h"
 #include "eloop.h"
 #include "kmscon_conf.h"
-#include "kmscon_module.h"
+#include "shl_module.h"
 #include "kmscon_seat.h"
 #include "shl_dlist.h"
 #include "shl_log.h"

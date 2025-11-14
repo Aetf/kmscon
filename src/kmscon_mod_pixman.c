@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "text.h"
-#include "kmscon_module_interface.h"
+#include "shl_module_interface.h"
 #include "shl_log.h"
 
 #define LOG_SUBSYSTEM "mod_pixman"
@@ -39,7 +39,7 @@ static int kmscon_pixman_load(void)
 {
 	int ret;
 
-	kmscon_text_pixman_ops.owner = KMSCON_THIS_MODULE;
+	kmscon_text_pixman_ops.owner = SHL_THIS_MODULE;
 	ret = kmscon_text_register(&kmscon_text_pixman_ops);
 	if (ret) {
 		log_error("cannot register pixman renderer");
@@ -54,4 +54,4 @@ static void kmscon_pixman_unload(void)
 	kmscon_text_unregister(kmscon_text_pixman_ops.name);
 }
 
-KMSCON_MODULE(NULL, kmscon_pixman_load, kmscon_pixman_unload, NULL);
+SHL_MODULE(NULL, kmscon_pixman_load, kmscon_pixman_unload, NULL);
