@@ -614,10 +614,8 @@ int main(int argc, char **argv)
 	conf = conf_ctx_get_mem(conf_ctx);
 
 	ret = kmscon_conf_load_main(conf_ctx, argc, argv);
-	if (ret) {
+	if (ret)
 		log_error("cannot load configuration: %d", ret);
-		goto err_conf;
-	}
 
 	if (conf->exit) {
 		kmscon_conf_free(conf_ctx);
@@ -669,7 +667,6 @@ err_unload:
 	kmscon_text_unregister(kmscon_text_bblit_ops.name);
 	kmscon_font_unregister(kmscon_font_8x16_ops.name);
 	kmscon_unload_modules();
-err_conf:
 	kmscon_conf_free(conf_ctx);
 err_out:
 	if (ret)
