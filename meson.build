@@ -195,11 +195,11 @@ foreach filename, kwargs : {
     'install_dir': bindir,
     'install_mode': 'rwxr-xr-x',
   },
-  'docs/kmscon.service.in': {
+  'scripts/systemd/kmscon.service.in': {
     'install_dir': systemdsystemunitdir,
     'install_mode': 'rw-r--r--',
   },
-  'docs/kmsconvt@.service.in': {
+  'scripts/systemd/kmsconvt@.service.in': {
     'install_dir': systemdsystemunitdir,
     'install_mode': 'rw-r--r--',
   },
