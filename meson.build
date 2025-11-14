@@ -208,3 +208,9 @@ foreach filename, kwargs : {
     kwargs: kwargs,
   )
 endforeach
+
+# kmscon.conf
+install_data(
+  'scripts/etc/kmscon.conf',
+  install_dir: join_paths(get_option('sysconfdir'), 'kmscon')
+)
