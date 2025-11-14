@@ -592,7 +592,9 @@ static int aftercheck_vt(struct conf_option *opt, int argc, char **argv,
 		return 0;
 
 	if (!kmscon_conf_is_single_seat(conf)) {
-		log_error("you cannot use global --vt if --seats contains not exactly one seat");
+		log_error("you cannot use global --vt if --seats contains not exactly one seat, ignoring --vt");
+		free(conf->vt);
+		conf->vt = NULL;
 		return -EFAULT;
 	}
 
@@ -820,26 +822,35 @@ int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv)
 	if (conf->exit)
 		return 0;
 
-	/* Both use-original mode and desired-width/desired-height specify that
-	 * kmscon should use a specific mode. If both are in effect then the correct
-	 * mode is ambiguous. Error out and tell the user.
-	 */
-	if (conf->use_original_mode && conf->mode != NULL) {
-		fprintf(stderr, "Cannot use --mode if --use-original-mode is enabled. Try --no-use-original-mode.\n");
-		return -EINVAL;
-	}
-
 	if (!conf->debug && !conf->verbose && conf->silent)
 		log_set_config(&LOG_CONFIG_WARNING(0, 0, 0, 0));
 	else
 		log_set_config(&LOG_CONFIG_INFO(conf->debug,
 						conf->verbose));
 
-	log_print_init("kmscon");
-
 	ret = conf_ctx_parse_file(ctx, "%s/kmscon.conf", conf->configdir);
 	if (ret)
 		return ret;
+
+	/*
+	 * Do it a second time after parsing kmscon.conf, so you can put verbose
+	 * or debug in the config file too, and if you set it on the command line,
+	 * you will get the debug messages when parsing kmscon.conf.
+	 */
+	if (!conf->debug && !conf->verbose && conf->silent)
+		log_set_config(&LOG_CONFIG_WARNING(0, 0, 0, 0));
+	else
+		log_set_config(&LOG_CONFIG_INFO(conf->debug,
+						conf->verbose));
+
+	/* You can't set a mode, and use_original_mode at the same time
+	 * specified mode takes priority.
+	 */
+	if (conf->use_original_mode && conf->mode != NULL) {
+		log_error("Cannot use --mode if --use-original-mode is enabled. Try --no-use-original-mode.\n");
+		conf->use_original_mode = false;
+	}
+	log_print_init("kmscon");
 
 	return 0;
 }
