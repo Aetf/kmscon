@@ -30,8 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include "kmscon_module.h"
-#include "kmscon_module_interface.h"
+#include "shl_module.h"
+#include "shl_module_interface.h"
 #include "shl_dlist.h"
 #include "shl_githead.h"
 #include "shl_log.h"
@@ -41,10 +41,10 @@
 
 static struct shl_dlist module_list = SHL_DLIST_INIT(module_list);
 
-int kmscon_module_open(struct kmscon_module **out, const char *file)
+int shl_module_open(struct shl_module **out, const char *file)
 {
 	int ret;
-	struct kmscon_module *module;
+	struct shl_module *module;
 	void *handle;
 
 	if (!out || !file)
@@ -119,7 +119,7 @@ err_unload:
 	return ret;
 }
 
-void kmscon_module_ref(struct kmscon_module *module)
+void shl_module_ref(struct shl_module *module)
 {
 	if (!module || !module->ref)
 		return;
@@ -127,7 +127,7 @@ void kmscon_module_ref(struct kmscon_module *module)
 	++module->ref;
 }
 
-void kmscon_module_unref(struct kmscon_module *module)
+void shl_module_unref(struct shl_module *module)
 {
 	if (!module || !module->ref || --module->ref)
 		return;
@@ -141,7 +141,7 @@ void kmscon_module_unref(struct kmscon_module *module)
 	dlclose(module->handle);
 }
 
-int kmscon_module_load(struct kmscon_module *module)
+int shl_module_load(struct shl_module *module)
 {
 	int ret;
 
@@ -165,7 +165,7 @@ int kmscon_module_load(struct kmscon_module *module)
 	return 0;
 }
 
-void kmscon_module_unload(struct kmscon_module *module)
+void shl_module_unload(struct shl_module *module)
 {
 	if (!module || !module->loaded)
 		return;
@@ -183,7 +183,7 @@ void kmscon_load_modules(void)
 	DIR *ent;
 	struct dirent *de;
 	char *file;
-	struct kmscon_module *mod;
+	struct shl_module *mod;
 
 	log_debug("loading global modules from %s", BUILD_MODULE_DIR);
 
@@ -235,15 +235,15 @@ void kmscon_load_modules(void)
 			continue;
 		}
 
-		ret = kmscon_module_open(&mod, file);
+		ret = shl_module_open(&mod, file);
 		free(file);
 
 		if (ret)
 			continue;
 
-		ret = kmscon_module_load(mod);
+		ret = shl_module_load(mod);
 		if (ret) {
-			kmscon_module_unref(mod);
+			shl_module_unref(mod);
 			continue;
 		}
 
@@ -255,15 +255,15 @@ void kmscon_load_modules(void)
 
 void kmscon_unload_modules(void)
 {
-	struct kmscon_module *module;
+	struct shl_module *module;
 
 	log_debug("unloading modules");
 
 	while (!shl_dlist_empty(&module_list)) {
-		module = shl_dlist_entry(module_list.prev, struct kmscon_module,
+		module = shl_dlist_entry(module_list.prev, struct shl_module,
 					 list);
 		shl_dlist_unlink(&module->list);
-		kmscon_module_unload(module);
-		kmscon_module_unref(module);
+		shl_module_unload(module);
+		shl_module_unref(module);
 	}
 }

@@ -57,7 +57,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font.h"
-#include "kmscon_module.h"
+#include "shl_module.h"
 #include "shl_dlist.h"
 #include "shl_log.h"
 #include "shl_misc.h"
@@ -142,7 +142,7 @@ static inline void kmscon_font_destroy(void *data)
 {
 	const struct kmscon_font_ops *ops = data;
 
-	kmscon_module_unref(ops->owner);
+	shl_module_unref(ops->owner);
 }
 
 /**
@@ -177,7 +177,7 @@ int kmscon_font_register(const struct kmscon_font_ops *ops)
 		return ret;
 	}
 
-	kmscon_module_ref(ops->owner);
+	shl_module_ref(ops->owner);
 	return 0;
 }
 

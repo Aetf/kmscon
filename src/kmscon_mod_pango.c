@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "font.h"
-#include "kmscon_module_interface.h"
+#include "shl_module_interface.h"
 #include "shl_log.h"
 
 #define LOG_SUBSYSTEM "mod_pango"
@@ -40,7 +40,7 @@ static int kmscon_pango_load(void)
 {
 	int ret;
 
-	kmscon_font_pango_ops.owner = KMSCON_THIS_MODULE;
+	kmscon_font_pango_ops.owner = SHL_THIS_MODULE;
 	ret = kmscon_font_register(&kmscon_font_pango_ops);
 	if (ret) {
 		log_error("cannot register pango font");
@@ -55,4 +55,4 @@ static void kmscon_pango_unload(void)
 	kmscon_font_unregister(kmscon_font_pango_ops.name);
 }
 
-KMSCON_MODULE(NULL, kmscon_pango_load, kmscon_pango_unload, NULL);
+SHL_MODULE(NULL, kmscon_pango_load, kmscon_pango_unload, NULL);

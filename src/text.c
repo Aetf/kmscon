@@ -49,7 +49,7 @@ static inline void kmscon_text_destroy(void *data)
 {
 	const struct kmscon_text_ops *ops = data;
 
-	kmscon_module_unref(ops->owner);
+	shl_module_unref(ops->owner);
 }
 
 /**
@@ -84,7 +84,7 @@ int kmscon_text_register(const struct kmscon_text_ops *ops)
 		return ret;
 	}
 
-	kmscon_module_ref(ops->owner);
+	shl_module_ref(ops->owner);
 	return 0;
 }
 

@@ -32,7 +32,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
-#include "kmscon_module.h"
+#include "shl_module.h"
 #include "uterm_video.h"
 
 /* fonts */
@@ -77,7 +77,7 @@ struct kmscon_font {
 
 struct kmscon_font_ops {
 	const char *name;
-	struct kmscon_module *owner;
+	struct shl_module *owner;
 	int (*init) (struct kmscon_font *out,
 		     const struct kmscon_font_attr *attr);
 	void (*destroy) (struct kmscon_font *font);

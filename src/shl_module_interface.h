@@ -27,17 +27,17 @@
  * Public Module Interface
  */
 
-#ifndef KMSCON_MODULE_INTERFACE_H
-#define KMSCON_MODULE_INTERFACE_H
+#ifndef SHL_MODULE_INTERFACE_H
+#define SHL_MODULE_INTERFACE_H
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include "kmscon_module.h"
+#include "shl_module.h"
 #include "shl_dlist.h"
 #include "shl_githead.h"
 #include "shl_misc.h"
 
-struct kmscon_module_info {
+struct shl_module_info {
 	const char *githead;
 	const char *date;
 	const char *time;
@@ -47,8 +47,8 @@ struct kmscon_module_info {
 	void (*exit) (void);
 };
 
-struct kmscon_module {
-	struct kmscon_module_info info;
+struct shl_module {
+	struct shl_module_info info;
 	struct shl_dlist list;
 	unsigned long ref;
 	bool loaded;
@@ -56,8 +56,8 @@ struct kmscon_module {
 	char *file;
 };
 
-#define KMSCON_MODULE(_init, _load, _unload, _exit) \
-	struct kmscon_module module = { \
+#define SHL_MODULE(_init, _load, _unload, _exit) \
+	struct shl_module module = { \
 		.info = { \
 			.githead = shl_git_head, \
 			.date = __DATE__, \
@@ -70,7 +70,7 @@ struct kmscon_module {
 	};
 
 SHL_EXPORT
-extern struct kmscon_module module;
-#define KMSCON_THIS_MODULE (&module)
+extern struct shl_module module;
+#define SHL_THIS_MODULE (&module)
 
-#endif /* KMSCON_MODULE_INTERFACE_H */
+#endif /* SHL_MODULE_INTERFACE_H */
