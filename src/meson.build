@@ -54,15 +54,6 @@ shl_dep = [
   htable_deps,
   xkbcommon_deps
 ]
-if enable_glesv2
-  shl_srcs += [
-    'shl_gl_shader.c',
-    'shl_gl_math.c',
-  ]
-  shl_dep += [
-    glesv2_deps
-  ]
-endif
 
 shl = static_library('shl', shl_srcs, dependencies: shl_dep)
 shl_deps = declare_dependency(
@@ -70,6 +61,24 @@ shl_deps = declare_dependency(
   include_directories: [include_directories('.')],
   dependencies: shl_dep
 )
+
+if enable_glesv2
+  shl_gl_srcs = [
+    'shl_gl_shader.c',
+    'shl_gl_math.c',
+  ]
+  shl_gl_dep = [
+    shl_deps,
+    glesv2_deps
+  ]
+
+shl_gl = static_library('shl_gl', shl_gl_srcs, dependencies: shl_gl_dep)
+shl_gl_deps = declare_dependency(
+  link_with: [shl_gl],
+  include_directories: [include_directories('.')],
+  dependencies: shl_gl_dep
+)
+endif
 
 #
 # libeloop
@@ -135,6 +144,7 @@ if enable_video_drm3d
     embed_gen.process('uterm_drm3d_fill.frag', extra_args: shader_regex),
   ]
   uterm_dep += [
+    shl_gl_deps,
     egl_deps,
     gbm_deps,
     glesv2_deps,
@@ -208,7 +218,7 @@ if enable_renderer_gltex
       embed_gen.process('text_gltex_atlas.frag', extra_args: shader_regex),
     ],
     name_prefix: '',
-    dependencies: [libtsm_deps, glesv2_deps, shl_deps],
+    dependencies: [libtsm_deps, glesv2_deps, shl_deps, shl_gl_deps],
     install: true,
     install_dir: moduledir,
   )
