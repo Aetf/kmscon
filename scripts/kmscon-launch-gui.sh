@@ -16,7 +16,7 @@ else
     printf "\033Ptmux;\033\033]setBackground\a\033\\"
 fi
 
-eval "$@"
+"$@"
 
 # If the current tty has changed, wait until the user switches back.
 if [ -n "${kms_tty}" ]; then
