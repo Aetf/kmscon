@@ -100,6 +100,8 @@ static void monitor_refresh_seats(struct uterm_monitor *mon)
 
 	num = uterm_sd_get_seats(mon->sd, &seats);
 	if (num < 0) {
+		/* if it can't read the systemd socket, remove it from the pollfd */
+		ev_eloop_rm_fd(mon->sd_mon_fd);
 		log_warn("cannot read seat information from systemd: %d", num);
 		return;
 	}
