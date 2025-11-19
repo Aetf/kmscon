@@ -327,6 +327,12 @@ void uterm_display_unbind(struct uterm_display *disp)
 }
 
 SHL_EXPORT
+bool uterm_display_is_drm(struct uterm_display *disp)
+{
+	return (disp->flags & DISPLAY_DITHERING) == 0;
+}
+
+SHL_EXPORT
 struct uterm_display *uterm_display_next(struct uterm_display *disp)
 {
 	if (!disp || !disp->video || disp->list.next == &disp->video->displays)

@@ -65,7 +65,7 @@ int kmscon_pty_get_fd(struct kmscon_pty *pty);
 void kmscon_pty_dispatch(struct kmscon_pty *pty);
 
 int kmscon_pty_open(struct kmscon_pty *pty, unsigned short width,
-						unsigned short height);
+		    unsigned short height, bool drm);
 void kmscon_pty_close(struct kmscon_pty *pty);
 
 int kmscon_pty_write(struct kmscon_pty *pty, const char *u8, size_t len);

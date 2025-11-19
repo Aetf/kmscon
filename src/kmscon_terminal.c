@@ -188,6 +188,19 @@ static void redraw_all(struct kmscon_terminal *term)
 	}
 }
 
+static bool has_kms_display(struct kmscon_terminal *term)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+
+	shl_dlist_for_each(iter, &term->screens) {
+		scr = shl_dlist_entry(iter, struct screen, list);
+		if (uterm_display_is_drm(scr->disp))
+			return true;
+	}
+	return false;
+}
+
 static void redraw_all_test(struct kmscon_terminal *term)
 {
 	struct shl_dlist *iter;
@@ -597,7 +610,7 @@ static int terminal_open(struct kmscon_terminal *term)
 	tsm_vte_hard_reset(term->vte);
 	width = tsm_screen_get_width(term->console);
 	height = tsm_screen_get_height(term->console);
-	ret = kmscon_pty_open(term->pty, width, height);
+	ret = kmscon_pty_open(term->pty, width, height, has_kms_display(term));
 	if (ret)
 		return ret;
 
