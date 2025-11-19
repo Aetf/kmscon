@@ -252,7 +252,7 @@ static bool pty_is_open(struct kmscon_pty *pty)
 
 static void __attribute__((noreturn))
 exec_child(const char *term, const char *colorterm, char **argv,
-	   const char *seat, const char *vtnr, bool env_reset)
+	   const char *seat, const char *vtnr, bool env_reset, bool drm)
 {
 	char **env;
 	char **def_argv;
@@ -285,6 +285,13 @@ exec_child(const char *term, const char *colorterm, char **argv,
 		setenv("XDG_SEAT", seat, 1);
 	if (vtnr)
 		setenv("XDG_VTNR", vtnr, 1);
+
+	if (drm) {
+		setenv("KMS_START_SCRIPT", "kmscon-launch-gui", 1);
+		setenv("TERM_SESSION_TYPE", "kms", 1);
+	} else {
+		setenv("TERM_SESSION_TYPE", "fb", 1);
+	}
 
 	execve(argv[0], argv, environ);
 
@@ -394,7 +401,7 @@ err_out:
  * the libutil library in glibc.
  */
 static int pty_spawn(struct kmscon_pty *pty, int master,
-			unsigned short width, unsigned short height)
+		     unsigned short width, unsigned short height, bool drm)
 {
 	pid_t pid;
 	struct winsize ws;
@@ -411,7 +418,7 @@ static int pty_spawn(struct kmscon_pty *pty, int master,
 	case 0:
 		setup_child(master, &ws);
 		exec_child(pty->term, pty->colorterm, pty->argv, pty->seat,
-			   pty->vtnr, pty->env_reset);
+			   pty->vtnr, pty->env_reset, drm);
 		exit(EXIT_FAILURE);
 	default:
 		log_debug("forking child %d", pid);
@@ -549,7 +556,7 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld,
 }
 
 int kmscon_pty_open(struct kmscon_pty *pty, unsigned short width,
-							unsigned short height)
+		    unsigned short height, bool drm)
 {
 	int ret;
 	int master;
@@ -575,7 +582,7 @@ int kmscon_pty_open(struct kmscon_pty *pty, unsigned short width,
 	if (ret)
 		goto err_fd;
 
-	ret = pty_spawn(pty, master, width, height);
+	ret = pty_spawn(pty, master, width, height, drm);
 	if (ret)
 		goto err_sig;
 
