@@ -573,7 +573,7 @@ static int real_deactivate(struct uterm_vt *vt)
 	return -EINPROGRESS;
 }
 
-static void real_input(struct uterm_vt *vt, struct uterm_input_event *ev)
+static void real_input(struct uterm_vt *vt, struct uterm_input_key_event *ev)
 {
 	int id;
 	struct vt_stat vts;
@@ -696,7 +696,7 @@ static int fake_deactivate(struct uterm_vt *vt)
 	return vt_call_deactivate(vt, false);
 }
 
-static void fake_input(struct uterm_vt *vt, struct uterm_input_event *ev)
+static void fake_input(struct uterm_vt *vt, struct uterm_input_key_event *ev)
 {
 	if (ev->handled)
 		return;
@@ -749,7 +749,7 @@ static void fake_close(struct uterm_vt *vt)
  */
 
 static void vt_input(struct uterm_input *input,
-		     struct uterm_input_event *ev,
+		     struct uterm_input_key_event *ev,
 		     void *data)
 {
 	struct uterm_vt *vt = data;
@@ -890,7 +890,7 @@ int uterm_vt_allocate(struct uterm_vt_master *vtm,
 	if (ret)
 		goto err_sig1;
 
-	ret = uterm_input_register_cb(vt->input, vt_input, vt);
+	ret = uterm_input_register_key_cb(vt->input, vt_input, vt);
 	if (ret)
 		goto err_sig2;
 
@@ -930,7 +930,7 @@ int uterm_vt_allocate(struct uterm_vt_master *vtm,
 	return 0;
 
 err_input:
-	uterm_input_unregister_cb(vt->input, vt_input, vt);
+	uterm_input_unregister_key_cb(vt->input, vt_input, vt);
 err_sig2:
 	ev_eloop_unregister_signal_cb(vtm->eloop, SIGUSR2, vt_sigusr2, vt);
 err_sig1:

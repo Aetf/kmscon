@@ -61,7 +61,7 @@ enum uterm_input_modifier {
 /* keep in sync with TSM_VTE_INVALID */
 #define UTERM_INPUT_INVALID 0xffffffff
 
-struct uterm_input_event {
+struct uterm_input_key_event {
 	bool handled;		/* user-controlled, default is false */
 	uint16_t keycode;	/* linux keycode - KEY_* - linux/input.h */
 	uint32_t ascii;		/* ascii keysym for @keycode */
@@ -72,11 +72,33 @@ struct uterm_input_event {
 	uint32_t *codepoints;	/* ucs4 unicode value or UTERM_INPUT_INVALID */
 };
 
+enum uterm_input_pointer_type {
+	UTERM_MOVED,
+	UTERM_BUTTON,
+	UTERM_WHEEL,
+	UTERM_SYNC,
+	UTERM_HIDE_TIMEOUT,
+};
+
+struct uterm_input_pointer_event {
+	enum uterm_input_pointer_type event;
+	int32_t pointer_x;
+	int32_t pointer_y;
+	int32_t wheel;
+	uint8_t button;
+	bool pressed;
+	bool double_click;
+};
+
 #define UTERM_INPUT_HAS_MODS(_ev, _mods) (((_ev)->mods & (_mods)) == (_mods))
 
-typedef void (*uterm_input_cb) (struct uterm_input *input,
-				struct uterm_input_event *ev,
-				void *data);
+typedef void (*uterm_input_key_cb) (struct uterm_input *input,
+				    struct uterm_input_key_event *ev,
+				    void *data);
+
+typedef void (*uterm_input_pointer_cb) (struct uterm_input *input,
+					struct uterm_input_pointer_event *ev,
+					void *data);
 
 int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop,
 		    const char *model, const char *layout, const char *variant,
@@ -87,16 +109,24 @@ int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop,
 void uterm_input_ref(struct uterm_input *input);
 void uterm_input_unref(struct uterm_input *input);
 
-void uterm_input_add_dev(struct uterm_input *input, const char *node);
+void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse);
 void uterm_input_remove_dev(struct uterm_input *input, const char *node);
 
-int uterm_input_register_cb(struct uterm_input *input, uterm_input_cb cb,
+int uterm_input_register_key_cb(struct uterm_input *input, uterm_input_key_cb cb,
 			    void *data);
-void uterm_input_unregister_cb(struct uterm_input *input, uterm_input_cb cb,
+void uterm_input_unregister_key_cb(struct uterm_input *input, uterm_input_key_cb cb,
+			       void *data);
+
+int uterm_input_register_pointer_cb(struct uterm_input *input, uterm_input_pointer_cb cb,
+			    void *data);
+void uterm_input_unregister_pointer_cb(struct uterm_input *input, uterm_input_pointer_cb cb,
 			       void *data);
 
 void uterm_input_sleep(struct uterm_input *input);
 void uterm_input_wake_up(struct uterm_input *input);
 bool uterm_input_is_awake(struct uterm_input *input);
+void uterm_input_set_pointer_max(struct uterm_input *input,
+				 unsigned int max_x,
+				 unsigned int max_y);
 
 #endif /* UTERM_UTERM_INPUT_H */

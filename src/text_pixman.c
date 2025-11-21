@@ -36,6 +36,7 @@
 #include "font_rotate.h"
 #include "shl_hashtable.h"
 #include "shl_log.h"
+#include "shl_misc.h"
 #include "text.h"
 #include "uterm_video.h"
 
@@ -431,7 +432,7 @@ static int tp_draw(struct kmscon_text *txt,
 	 * image for each glyph here.
 	 * libc malloc() is pretty fast, but this still costs us a lot of
 	 * rendering performance. */
-	if (!fc.red && !fc.green && !fc.blue) {
+	if (fc.red == 0xff00 && fc.green == 0xff00 && fc.blue == 0xff00) {
 		col = tp->white;
 		pixman_image_ref(col);
 	} else {
@@ -491,6 +492,119 @@ static int tp_draw(struct kmscon_text *txt,
 	return 0;
 }
 
+static int tp_draw_pointer(struct kmscon_text *txt,
+			   unsigned int pointer_x, unsigned int pointer_y,
+			   const struct tsm_screen_attr *attr)
+{
+	struct tp_pixman *tp = txt->data;
+	struct uterm_mode *mode;
+	struct tp_glyph *glyph;
+	uint32_t ch = 'I';
+	uint64_t id = ch;
+	int ret;
+	unsigned int x, y, w, h, sw, sh;
+	unsigned int m_x, m_y;
+	uint32_t bc;
+	pixman_color_t fc;
+	pixman_image_t *col;
+
+	mode = uterm_display_get_current(txt->disp);
+	if (!mode)
+		return -EINVAL;
+	sw = uterm_mode_get_width(mode);
+	sh = uterm_mode_get_height(mode);
+
+	ret = find_glyph(txt, &glyph, id, &ch, 1, attr);
+	if (ret)
+		return ret;
+
+	bc = (attr->br << 16) | (attr->bg << 8) | (attr->bb);
+	fc.red = attr->fr << 8;
+	fc.green = attr->fg << 8;
+	fc.blue = attr->fb << 8;
+	fc.alpha = 0xffff;
+
+	/* TODO: We _really_ should fix pixman to allow something like
+	 * pixman_image_set_solid_fill(img, &fc) to avoid allocating a pixman
+	 * image for each glyph here.
+	 * libc malloc() is pretty fast, but this still costs us a lot of
+	 * rendering performance. */
+	if (attr->fr == 0xff && attr->fg == 0xff && attr->fb == 0xff) {
+		col = tp->white;
+		pixman_image_ref(col);
+	} else {
+		col = pixman_image_create_solid_fill(&fc);
+		if (!col) {
+			log_error("cannot create pixman color image");
+			return -ENOMEM;
+		}
+	}
+
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		w = FONT_WIDTH(txt);
+		h = FONT_HEIGHT(txt);
+	} else {
+		w = FONT_HEIGHT(txt);
+		h = FONT_WIDTH(txt);
+	}
+
+	m_x = SHL_DIV_ROUND_UP(w, 2);
+	m_y = SHL_DIV_ROUND_UP(h, 2);
+
+	switch (txt->orientation) {
+	default:
+	case OR_NORMAL:
+		x = pointer_x;
+		y = pointer_y;
+		break;
+	case OR_UPSIDE_DOWN:
+		x = sw - pointer_x;
+		y = sh - pointer_y;
+		break;
+	case OR_RIGHT:
+		x = sw - pointer_y;
+		y = pointer_x;
+		break;
+	case OR_LEFT:
+		x = pointer_y;
+		y = sh - pointer_x;
+		break;
+	}
+	if (x < m_x)
+		x = m_x;
+	if (x + m_x > sw)
+		x = sw - m_x;
+	if (y < m_y)
+		y = m_y;
+	if (y + m_y > sh)
+		y = sh - m_y;
+	x -= m_x;
+	y -= m_y;
+
+	if (!bc) {
+		pixman_image_composite(PIXMAN_OP_SRC,
+				       col,
+				       glyph->surf,
+				       tp->surf[tp->cur],
+				       0, 0, 0, 0,
+				       x, y, w, h);
+	} else {
+		pixman_fill(tp->c_data, tp->c_stride / 4, tp->c_bpp,
+			    x, y, w, h, bc);
+
+		pixman_image_composite(PIXMAN_OP_OVER,
+				       col,
+				       glyph->surf,
+				       tp->surf[tp->cur],
+				       0, 0, 0, 0,
+				       x, y, w, h);
+	}
+
+	pixman_image_unref(col);
+
+	return 0;
+}
+
 static int tp_render(struct kmscon_text *txt)
 {
 	struct tp_pixman *tp = txt->data;
@@ -519,6 +633,7 @@ struct kmscon_text_ops kmscon_text_pixman_ops = {
 	.rotate = tp_rotate,
 	.prepare = tp_prepare,
 	.draw = tp_draw,
+	.draw_pointer = tp_draw_pointer,
 	.render = tp_render,
 	.abort = NULL,
 };
