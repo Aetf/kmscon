@@ -276,6 +276,9 @@ static void update_pointer_max_all(struct kmscon_terminal *term)
 			sw = uterm_mode_get_height(mode);
 			sh = uterm_mode_get_width(mode);
 		}
+		if (!sw || !sh)
+			continue;
+
 		if (sw < max_x)
 			max_x = sw;
 		if (sh < max_y)
