@@ -511,7 +511,7 @@
         <term><option>--render-engine {engine}</option></term>
         <listitem>
           <para>Specify console the rendering engine. Available engines are
-                `bblit', `bbulk', and `gltex'.
+                `bbulk', and `gltex'.
                 (default: detect by GPU type)</para>
         </listitem>
       </varlistentry>

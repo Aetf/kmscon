@@ -132,7 +132,6 @@ int kmscon_text_draw_cb(struct tsm_screen *con,
 
 /* modularized backends */
 
-extern struct kmscon_text_ops kmscon_text_bblit_ops;
 extern struct kmscon_text_ops kmscon_text_bbulk_ops;
 extern struct kmscon_text_ops kmscon_text_gltex_ops;
 

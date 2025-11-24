@@ -20,8 +20,6 @@ option('video_drm3d', type: 'feature', value: 'auto',
   description: 'drm3d video backend')
 
 # renderers
-option('renderer_bbulk', type: 'feature', value: 'auto',
-  description: 'bbulk renderer')
 option('renderer_gltex', type: 'feature', value: 'auto',
   description: 'gltex renderer')
 
