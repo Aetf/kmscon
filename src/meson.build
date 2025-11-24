@@ -198,18 +198,6 @@ if enable_font_pango
   )
 endif
 
-if enable_renderer_bbulk
-  mod_bbulk = shared_module('mod-bbulk', [
-      'text_bbulk.c',
-      'kmscon_mod_bbulk.c',
-    ],
-    name_prefix: '',
-    dependencies: [libtsm_deps, shl_deps],
-    install: true,
-    install_dir: moduledir,
-  )
-endif
-
 if enable_renderer_gltex
   mod_gltex = shared_module('mod-gltex', [
       'text_gltex.c',
@@ -244,7 +232,7 @@ kmscon_srcs = [
   'font_rotate.c',
   'font_8x16.c',
   'text.c',
-  'text_bblit.c',
+  'text_bbulk.c',
   'kmscon_seat.c',
   'kmscon_conf.c',
   'kmscon_main.c',

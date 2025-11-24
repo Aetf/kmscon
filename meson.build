@@ -98,7 +98,6 @@ foreach name, reqs : {
   'video_fbdev': [],
   'video_drm2d': [libdrm_deps],
   'video_drm3d': [libdrm_deps, gbm_deps, egl_deps, glesv2_deps],
-  'renderer_bbulk': [],
   'renderer_gltex': [glesv2_deps],
   'font_unifont': [],
   'font_pango': [pango_deps],
