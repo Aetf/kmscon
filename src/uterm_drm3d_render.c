@@ -53,8 +53,6 @@
 #include "uterm_video_internal.h"
 #include "uterm_drm3d_blend.vert.bin.h"
 #include "uterm_drm3d_blend.frag.bin.h"
-#include "uterm_drm3d_blit.vert.bin.h"
-#include "uterm_drm3d_blit.frag.bin.h"
 #include "uterm_drm3d_fill.vert.bin.h"
 #include "uterm_drm3d_fill.frag.bin.h"
 
@@ -66,10 +64,8 @@ static int init_shaders(struct uterm_video *video)
 	int ret;
 	char *fill_attr[] = { "position", "color" };
 	char *blend_attr[] = { "position", "texture_position" };
-	char *blit_attr[] = { "position", "texture_position" };
-	int blend_vlen, blend_flen, blit_vlen, blit_flen, fill_vlen, fill_flen;
+	int blend_vlen, blend_flen, fill_vlen, fill_flen;
 	const char *blend_vert, *blend_frag;
-	const char *blit_vert, *blit_frag;
 	const char *fill_vert, *fill_frag;
 
 	if (v3d->sinit == 1)
@@ -83,10 +79,6 @@ static int init_shaders(struct uterm_video *video)
 	blend_vlen = _binary_uterm_drm3d_blend_vert_size;
 	blend_frag = _binary_uterm_drm3d_blend_frag_start;
 	blend_flen = _binary_uterm_drm3d_blend_frag_size;
-	blit_vert = _binary_uterm_drm3d_blit_vert_start;
-	blit_vlen = _binary_uterm_drm3d_blit_vert_size;
-	blit_frag = _binary_uterm_drm3d_blit_frag_start;
-	blit_flen = _binary_uterm_drm3d_blit_frag_size;
 	fill_vert = _binary_uterm_drm3d_fill_vert_start;
 	fill_vlen = _binary_uterm_drm3d_fill_vert_size;
 	fill_frag = _binary_uterm_drm3d_fill_frag_start;
@@ -116,17 +108,6 @@ static int init_shaders(struct uterm_video *video)
 	v3d->uni_blend_bgcol = gl_shader_get_uniform(v3d->blend_shader,
 						     "bgcolor");
 
-	ret = gl_shader_new(&v3d->blit_shader, blit_vert, blit_vlen,
-			    blit_frag, blit_flen, blit_attr, 2, log_llog,
-			    NULL);
-	if (ret)
-		return ret;
-
-	v3d->uni_blit_proj = gl_shader_get_uniform(v3d->blit_shader,
-						   "projection");
-	v3d->uni_blit_tex = gl_shader_get_uniform(v3d->blit_shader,
-						  "texture");
-
 	gl_tex_new(&v3d->tex, 1);
 	v3d->sinit = 2;
 
@@ -142,136 +123,8 @@ void uterm_drm3d_deinit_shaders(struct uterm_video *video)
 
 	v3d->sinit = 0;
 	gl_tex_free(&v3d->tex, 1);
-	gl_shader_unref(v3d->blit_shader);
 	gl_shader_unref(v3d->blend_shader);
 	gl_shader_unref(v3d->fill_shader);
-}
-
-int uterm_drm3d_display_blit(struct uterm_display *disp,
-			     const struct uterm_video_buffer *buf,
-			     unsigned int x, unsigned int y)
-{
-	struct uterm_drm3d_video *v3d;
-	unsigned int sw, sh, tmp, width, height, i;
-	float mat[16];
-	float vertices[6 * 2], texpos[6 * 2];
-	int ret;
-	uint8_t *packed, *src, *dst;
-
-	if (!buf || buf->format != UTERM_FORMAT_XRGB32)
-		return -EINVAL;
-
-	v3d = uterm_drm_video_get_data(disp->video);
-	ret = uterm_drm3d_display_use(disp, NULL);
-	if (ret)
-		return ret;
-	ret = init_shaders(disp->video);
-	if (ret)
-		return ret;
-
-	sw = uterm_drm_mode_get_width(disp->current_mode);
-	sh = uterm_drm_mode_get_height(disp->current_mode);
-
-	vertices[0] = -1.0;
-	vertices[1] = -1.0;
-	vertices[2] = -1.0;
-	vertices[3] = +1.0;
-	vertices[4] = +1.0;
-	vertices[5] = +1.0;
-
-	vertices[6] = -1.0;
-	vertices[7] = -1.0;
-	vertices[8] = +1.0;
-	vertices[9] = +1.0;
-	vertices[10] = +1.0;
-	vertices[11] = -1.0;
-
-	texpos[0] = 0.0;
-	texpos[1] = 1.0;
-	texpos[2] = 0.0;
-	texpos[3] = 0.0;
-	texpos[4] = 1.0;
-	texpos[5] = 0.0;
-
-	texpos[6] = 0.0;
-	texpos[7] = 1.0;
-	texpos[8] = 1.0;
-	texpos[9] = 0.0;
-	texpos[10] = 1.0;
-	texpos[11] = 1.0;
-
-	tmp = x + buf->width;
-	if (tmp < x || x >= sw)
-		return -EINVAL;
-	if (tmp > sw)
-		width = sw - x;
-	else
-		width = buf->width;
-
-	tmp = y + buf->height;
-	if (tmp < y || y >= sh)
-		return -EINVAL;
-	if (tmp > sh)
-		height = sh - y;
-	else
-		height = buf->height;
-
-	glViewport(x, sh - y - height, width, height);
-	glDisable(GL_BLEND);
-
-	gl_shader_use(v3d->blit_shader);
-
-	gl_m4_identity(mat);
-	glUniformMatrix4fv(v3d->uni_blit_proj, 1, GL_FALSE, mat);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, v3d->tex);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-	if (v3d->supports_rowlen) {
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, buf->stride / 4);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, width, height, 0,
-			     GL_BGRA_EXT, GL_UNSIGNED_BYTE, buf->data);
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	} else if (buf->stride == width) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, width, height, 0,
-			     GL_BGRA_EXT, GL_UNSIGNED_BYTE, buf->data);
-	} else {
-		packed = malloc(width * height);
-		if (!packed)
-			return -ENOMEM;
-
-		src = buf->data;
-		dst = packed;
-		for (i = 0; i < height; ++i) {
-			memcpy(dst, src, width * 4);
-			dst += width * 4;
-			src += buf->stride;
-		}
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, width, height, 0,
-			     GL_BGRA_EXT, GL_UNSIGNED_BYTE, packed);
-
-		free(packed);
-	}
-
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glUniform1i(v3d->uni_blit_tex, 0);
-
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, vertices);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, texpos);
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-
-	if (gl_has_error(v3d->blit_shader)) {
-		log_warning("GL error");
-		return -EFAULT;
-	}
-
-	return 0;
 }
 
 static int display_blend(struct uterm_display *disp,

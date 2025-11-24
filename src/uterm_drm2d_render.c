@@ -46,53 +46,6 @@
 
 #define LOG_SUBSYSTEM "uterm_drm2d_render"
 
-int uterm_drm2d_display_blit(struct uterm_display *disp,
-			     const struct uterm_video_buffer *buf,
-			     unsigned int x, unsigned int y)
-{
-	unsigned int tmp;
-	uint8_t *dst, *src;
-	unsigned int width, height;
-	unsigned int sw, sh;
-	struct uterm_drm2d_rb *rb;
-	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
-
-	if (!buf || buf->format != UTERM_FORMAT_XRGB32)
-		return -EINVAL;
-
-	rb = &d2d->rb[d2d->current_rb ^ 1];
-	sw = uterm_drm_mode_get_width(disp->current_mode);
-	sh = uterm_drm_mode_get_height(disp->current_mode);
-
-	tmp = x + buf->width;
-	if (tmp < x || x >= sw)
-		return -EINVAL;
-	if (tmp > sw)
-		width = sw - x;
-	else
-		width = buf->width;
-
-	tmp = y + buf->height;
-	if (tmp < y || y >= sh)
-		return -EINVAL;
-	if (tmp > sh)
-		height = sh - y;
-	else
-		height = buf->height;
-
-	dst = rb->map;
-	dst = &dst[y * rb->stride + x * 4];
-	src = buf->data;
-
-	while (height--) {
-		memcpy(dst, src, 4 * width);
-		dst += rb->stride;
-		src += buf->stride;
-	}
-
-	return 0;
-}
-
 int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 				    const struct uterm_video_blend_req *req,
 				    size_t num)

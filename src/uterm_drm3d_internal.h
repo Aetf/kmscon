@@ -83,17 +83,10 @@ struct uterm_drm3d_video {
 	GLuint uni_blend_tex;
 	GLuint uni_blend_fgcol;
 	GLuint uni_blend_bgcol;
-
-	struct gl_shader *blit_shader;
-	GLuint uni_blit_proj;
-	GLuint uni_blit_tex;
 };
 
 int uterm_drm3d_display_use(struct uterm_display *disp, bool *opengl);
 void uterm_drm3d_deinit_shaders(struct uterm_video *video);
-int uterm_drm3d_display_blit(struct uterm_display *disp,
-			     const struct uterm_video_buffer *buf,
-			     unsigned int x, unsigned int y);
 int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
 				    const struct uterm_video_blend_req *req,
 				    size_t num);

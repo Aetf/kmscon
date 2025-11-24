@@ -285,7 +285,6 @@ static const struct display_ops drm2d_display_ops = {
 	.use = display_use,
 	.get_buffers = display_get_buffers,
 	.swap = display_swap,
-	.blit = uterm_drm2d_display_blit,
 	.fake_blendv = uterm_drm2d_display_fake_blendv,
 	.fill = uterm_drm2d_display_fill,
 };

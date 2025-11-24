@@ -52,9 +52,6 @@ struct uterm_drm2d_video {
 	struct ev_fd *efd;
 };
 
-int uterm_drm2d_display_blit(struct uterm_display *disp,
-			     const struct uterm_video_buffer *buf,
-			     unsigned int x, unsigned int y);
 int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 				    const struct uterm_video_blend_req *req,
 				    size_t num);
