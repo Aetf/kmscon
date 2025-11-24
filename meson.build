@@ -76,7 +76,6 @@ gbm_deps = dependency('gbm', disabler: true, required: get_option('video_drm3d')
 egl_deps = dependency('egl', disabler: true, required: get_option('video_drm3d'))
 glesv2_deps = dependency('glesv2', disabler: true, required: require_glesv2)
 pango_deps = dependency('pangoft2', disabler: true, required: get_option('font_pango'))
-pixman_deps = dependency('pixman-1', disabler: true, required: get_option('renderer_pixman'))
 xsltproc = find_program('xsltproc', native: true, disabler: true, required: get_option('docs'))
 check_deps = dependency('check', disabler: true, required: get_option('tests'))
 
@@ -101,7 +100,6 @@ foreach name, reqs : {
   'video_drm3d': [libdrm_deps, gbm_deps, egl_deps, glesv2_deps],
   'renderer_bbulk': [],
   'renderer_gltex': [glesv2_deps],
-  'renderer_pixman': [pixman_deps],
   'font_unifont': [],
   'font_pango': [pango_deps],
   'session_dummy': [],

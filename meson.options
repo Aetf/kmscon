@@ -24,8 +24,6 @@ option('renderer_bbulk', type: 'feature', value: 'auto',
   description: 'bbulk renderer')
 option('renderer_gltex', type: 'feature', value: 'auto',
   description: 'gltex renderer')
-option('renderer_pixman', type: 'feature', value: 'auto',
-  description: 'pixman renderer')
 
 # font backends
 option('font_unifont', type: 'feature', value: 'auto',
