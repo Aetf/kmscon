@@ -68,7 +68,6 @@ explicitly enable it via command line:
 |`font_pango`| `auto` | Pango based scalable font renderer |
 |`renderer_bbulk`| `auto` | Simple 2D software-renderer (bulk-mode) |
 |`renderer_gltex`| `auto` | OpenGLESv2 accelerated renderer |
-|`renderer_pixman`| `auto` | pixman based renderer |
 |`session_dummy`| `auto` | Dummy fallback session |
 |`session_terminal`| `auto` | Terminal-emulator sessions |
 

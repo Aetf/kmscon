@@ -226,18 +226,6 @@ if enable_renderer_gltex
   )
 endif
 
-if enable_renderer_pixman
-  mod_pixman = shared_module('mod-pixman', [
-      'text_pixman.c',
-      'kmscon_mod_pixman.c',
-    ],
-    name_prefix: '',
-    dependencies: [libtsm_deps, pixman_deps, shl_deps],
-    install: true,
-    install_dir: moduledir,
-  )
-endif
-
 #
 # Binaries
 # These are the sources for the main binaries and test programs. They mostly
