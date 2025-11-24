@@ -148,8 +148,6 @@ if enable_video_drm3d
     'uterm_mod_drm3d.c',
     embed_gen.process('uterm_drm3d_blend.vert', extra_args: shader_regex),
     embed_gen.process('uterm_drm3d_blend.frag', extra_args: shader_regex),
-    embed_gen.process('uterm_drm3d_blit.vert', extra_args: shader_regex),
-    embed_gen.process('uterm_drm3d_blit.frag', extra_args: shader_regex),
     embed_gen.process('uterm_drm3d_fill.vert', extra_args: shader_regex),
     embed_gen.process('uterm_drm3d_fill.frag', extra_args: shader_regex),
     ],

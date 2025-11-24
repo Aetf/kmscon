@@ -510,17 +510,6 @@ int uterm_display_fill(struct uterm_display *disp,
 }
 
 SHL_EXPORT
-int uterm_display_blit(struct uterm_display *disp,
-		       const struct uterm_video_buffer *buf,
-		       unsigned int x, unsigned int y)
-{
-	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
-		return -EINVAL;
-
-	return VIDEO_CALL(disp->ops->blit, -EOPNOTSUPP, disp, buf, x, y);
-}
-
-SHL_EXPORT
 int uterm_display_fake_blend(struct uterm_display *disp,
 			     const struct uterm_video_buffer *buf,
 			     unsigned int x, unsigned int y,

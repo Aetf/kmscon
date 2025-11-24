@@ -58,9 +58,6 @@ struct display_ops {
 			    struct uterm_video_buffer *buffer,
 			    unsigned int formats);
 	int (*swap) (struct uterm_display *disp, bool immediate);
-	int (*blit) (struct uterm_display *disp,
-		     const struct uterm_video_buffer *buf,
-		     unsigned int x, unsigned int y);
 	int (*fake_blendv) (struct uterm_display *disp,
 			    const struct uterm_video_blend_req *req,
 			    size_t num);

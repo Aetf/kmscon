@@ -353,7 +353,6 @@ static const struct display_ops drm_display_ops = {
 	.use = uterm_drm3d_display_use,
 	.get_buffers = NULL,
 	.swap = display_swap,
-	.blit = uterm_drm3d_display_blit,
 	.fake_blendv = uterm_drm3d_display_fake_blendv,
 	.fill = uterm_drm3d_display_fill,
 };

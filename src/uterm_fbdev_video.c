@@ -526,7 +526,6 @@ static const struct display_ops fbdev_display_ops = {
 	.use = display_use,
 	.get_buffers = display_get_buffers,
 	.swap = display_swap,
-	.blit = uterm_fbdev_display_blit,
 	.fake_blendv = uterm_fbdev_display_fake_blendv,
 	.fill = uterm_fbdev_display_fill,
 };
