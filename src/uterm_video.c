@@ -333,6 +333,14 @@ bool uterm_display_is_drm(struct uterm_display *disp)
 }
 
 SHL_EXPORT
+const char *uterm_display_backend_name(struct uterm_display *disp)
+{
+	if (disp && disp->video && disp->video->mod)
+		return disp->video->mod->name;
+	return "Unknown";
+}
+
+SHL_EXPORT
 struct uterm_display *uterm_display_next(struct uterm_display *disp)
 {
 	if (!disp || !disp->video || disp->list.next == &disp->video->displays)
