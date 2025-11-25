@@ -149,6 +149,7 @@ unsigned int uterm_mode_get_height(const struct uterm_mode *mode);
 void uterm_display_ref(struct uterm_display *disp);
 void uterm_display_unref(struct uterm_display *disp);
 bool uterm_display_is_drm(struct uterm_display *disp);
+const char *uterm_display_backend_name(struct uterm_display *disp);
 struct uterm_display *uterm_display_next(struct uterm_display *disp);
 
 int uterm_display_register_cb(struct uterm_display *disp, uterm_display_cb cb,
