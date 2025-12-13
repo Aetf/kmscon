@@ -35,6 +35,8 @@
 #include <libtsm.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/reboot.h>
 #include "conf.h"
 #include "eloop.h"
 #include "font.h"
@@ -670,6 +672,29 @@ static void input_event(struct uterm_input *input,
 				ev->mods, ev->num_syms, ev->keysyms)) {
 		rotate_ccw_all(term);
 		ev->handled = true;
+		return;
+	}
+
+	/* Ctrl+Alt+Del reboot */
+	if (term->conf->enable_reboot &&
+	    ev->mods == (SHL_CONTROL_MASK | SHL_ALT_MASK) &&
+	    ev->num_syms == 1 &&
+	    ev->keysyms[0] == XKB_KEY_Delete) {
+		int ret;
+
+		log_info("Ctrl+Alt+Del detected, initiating system reboot");
+		ev->handled = true;
+
+		/* Flush filesystem buffers before reboot */
+		sync();
+
+		/* Attempt system reboot */
+		ret = reboot(RB_AUTOBOOT);
+		if (ret < 0) {
+			log_error("reboot failed: %s (errno=%d). Ensure kmscon has CAP_SYS_BOOT capability or is running as root",
+				  strerror(errno), errno);
+		}
+
 		return;
 	}
 

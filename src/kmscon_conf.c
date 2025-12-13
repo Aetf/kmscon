@@ -96,6 +96,8 @@ static void print_help()
 		"\t                              process\n"
 		"\t    --sb-size <num>         [1000]\n"
 		"\t                              Size of the scrollback-buffer in lines\n"
+		"\t    --enable-reboot         [off]\n"
+		"\t                              Enable Ctrl+Alt+Del to reboot system\n"
 		"\n"
 		"Input Options:\n"
 		"\t    --xkb-model <model>        [-]  Set XkbModel for input devices\n"
@@ -725,6 +727,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_STRING('t', "term", &conf->term, "xterm-256color"),
 		CONF_OPTION_BOOL(0, "reset-env", &conf->reset_env, true),
 		CONF_OPTION_UINT(0, "sb-size", &conf->sb_size, 1000),
+		CONF_OPTION_BOOL(0, "enable-reboot", &conf->enable_reboot, false),
 
 		/* Input Options */
 		CONF_OPTION_STRING(0, "xkb-model", &conf->xkb_model, ""),
