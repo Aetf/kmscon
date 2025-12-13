@@ -93,6 +93,8 @@ struct kmscon_conf_t {
 	bool reset_env;
 	/* terminal scroll-back buffer size */
 	unsigned int sb_size;
+	/* enable Ctrl+Alt+Del reboot */
+	bool enable_reboot;
 
 	/* Input Options */
 	/* input KBD model */
