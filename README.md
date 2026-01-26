@@ -4,6 +4,11 @@ Kmscon is a simple terminal emulator based on linux kernel mode setting (KMS).
 It is an attempt to replace the in-kernel VT implementation with a userspace
 console. See kmscon(1) man-page for usage information.
 
+## History
+
+This is a personal fork from [kmscon](https://github.com/kmscon/kmscon), which was not updated for some years.
+Now upstream is alive again, so please submit your issues and PR there.
+
 ## Requirements
 
 Kmscon requires the following software:
@@ -98,7 +103,5 @@ its long form without the leading `--` (double dash). See `man kmscon` for more 
 This software is licensed under the terms of an MIT-like license. Please see
 [`COPYING`](./COPYING) for further information.
 
-## History
 
-This is a personal fork from https://www.freedesktop.org/wiki/Software/kmscon, which hasn't been updated since 2014.
 
